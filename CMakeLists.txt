@@ -10,7 +10,7 @@ if(MINGW)
 endif()
 
 # Buscar SFML
-find_package(SFML 3 COMPONENTS Graphics Window System REQUIRED)
+find_package(SFML 2.6 COMPONENTS graphics REQUIRED)
 
 # Directorios de inclusión
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -19,6 +19,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(SOURCES
     src/main.cpp
     src/Game.cpp
+    src/Pokemonster.cpp
+    src/BattleUI.cpp
 )
 
 # Crear ejecutable
@@ -28,7 +30,6 @@ add_executable(pokemon-game ${SOURCES})
 target_link_libraries(pokemon-game
     sfml-graphics
     sfml-window
-    sfml-system
 )
 
 # Copiar assets a la carpeta de construcción
