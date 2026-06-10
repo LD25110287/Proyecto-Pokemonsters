@@ -10,7 +10,7 @@ if(MINGW)
 endif()
 
 # Buscar SFML
-find_package(SFML 2.6 COMPONENTS graphics REQUIRED)
+find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
 
 # Directorios de inclusión
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -24,17 +24,19 @@ set(SOURCES
 )
 
 # Crear ejecutable
-add_executable(pokemon-game ${SOURCES})
-
+add_executable(pokemonster ${SOURCES})
+target_include_directories(pokemonster PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # Enlazar librerías SFML
-target_link_libraries(pokemon-game
+target_link_libraries(pokemonster
     sfml-graphics
     sfml-window
+    sfml-system
+    sfml-audio
 )
 
 # Copiar assets a la carpeta de construcción
-add_custom_command(TARGET pokemon-game POST_BUILD
+add_custom_command(TARGET pokemonster POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
-    $<TARGET_FILE_DIR:pokemon-game>/assets
+    $<TARGET_FILE_DIR:pokemonster>/assets
 )

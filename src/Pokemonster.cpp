@@ -1,13 +1,14 @@
 #include "../include/Pokemonster.h"
+#include <algorithm>
 #include <iostream>
 
 Pokemonster::Pokemonster()
-    : name(""), hpMax(1), hpActual(1), attack(1), defense(0), moves(), frameWidth(0), frameHeight(0)
+    : name(""), hpMax(1), hpActual(1), attackStat(1), defense(0), moves(), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0), maxFrames(0), frameDuration(0.1f), isAttacking(false)
 {
 }
 
 Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack, int defense, const std::vector<Move>& moves)
-    : name(name), hpMax(hpMax), hpActual(hpMax), attack(attack), defense(defense), moves(moves), frameWidth(0), frameHeight(0)
+    : name(name), hpMax(hpMax), hpActual(hpMax), attackStat(attack), defense(defense), moves(moves), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0), maxFrames(0), frameDuration(0.1f), isAttacking(false)
 {
 }
 
@@ -40,6 +41,57 @@ void Pokemonster::setFrame(int row, int col)
     sprite.setTextureRect(frameRect);
 }
 
+void Pokemonster::playAnimation(int row, int framesAmount)
+{
+    currentRow = row;
+    maxFrames = framesAmount;
+    currentFrame = 0;
+    isAttacking = true;
+    animClock.restart();
+    setFrame(currentRow, currentFrame);
+}
+
+void Pokemonster::updateAnimation()
+{
+    if (frameDuration <= 0.f || maxFrames <= 0)
+        return;
+
+    if (animClock.getElapsedTime().asSeconds() >= frameDuration)
+    {
+        currentFrame++;
+
+        if (currentFrame >= maxFrames)
+        {
+            if (isAttacking)
+            {
+                currentRow = 0; // Volver a Idle cuando la animación de ataque termina.
+                isAttacking = false;
+            }
+            currentFrame = 0;
+        }
+
+        setFrame(currentRow, currentFrame);
+        animClock.restart();
+    }
+}
+
+void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
+{
+    if (selectedMoveIndex < 0 || selectedMoveIndex >= static_cast<int>(moves.size()))
+    {
+        std::cerr << "Invalid move index: " << selectedMoveIndex << std::endl;
+        return;
+    }
+
+    const Move& selectedMove = moves[selectedMoveIndex];
+
+    // Reproducir animación específica del ataque basado en la fila y cantidad de cuadros del Move.
+    playAnimation(selectedMove.animationRow, selectedMove.frameCount);
+
+    int damage = std::max(1, selectedMove.power + attackStat - target.getDefense());
+    target.takeDamage(damage);
+}
+
 void Pokemonster::setPosition(float x, float y)
 {
     sprite.setPosition(x, y);
@@ -60,7 +112,7 @@ const std::vector<Move>& Pokemonster::getMoves() const { return moves; }
 const std::string& Pokemonster::getName() const { return name; }
 int Pokemonster::getHP() const { return hpActual; }
 int Pokemonster::getHPMax() const { return hpMax; }
-int Pokemonster::getAttack() const { return attack; }
+int Pokemonster::getAttack() const { return attackStat; }
 int Pokemonster::getDefense() const { return defense; }
 
 void Pokemonster::draw(sf::RenderTarget& target, sf::RenderStates states) const

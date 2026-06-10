@@ -14,6 +14,9 @@ public:
 
     bool loadSpriteSheet(const std::string& path, int fWidth, int fHeight);
     void setFrame(int row, int col);
+    void playAnimation(int row, int framesAmount);
+    void updateAnimation();
+    void attack(Pokemonster& target, int selectedMoveIndex);
     void setPosition(float x, float y);
 
     void takeDamage(int damage);
@@ -32,7 +35,7 @@ private:
     std::string name;
     int hpMax;
     int hpActual;
-    int attack;
+    int attackStat;
     int defense;
     std::vector<Move> moves; // tamaño esperado: 4
 
@@ -40,6 +43,13 @@ private:
     sf::Sprite sprite;
     int frameWidth;
     int frameHeight;
+
+    int currentFrame;
+    int currentRow;
+    int maxFrames;
+    float frameDuration;
+    bool isAttacking;
+    sf::Clock animClock;
 };
 
 #endif // POKEMONSTER_H

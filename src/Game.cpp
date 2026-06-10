@@ -40,10 +40,10 @@ void Battle::init()
 {
     // Crear movimientos de ejemplo
     std::vector<Move> pMoves = {
-        Move("Tackle", 10, MoveType::Normal, "assets/sounds/tackle.wav"),
-        Move("Flame", 14, MoveType::Fire, "assets/sounds/flame.wav"),
-        Move("Splash", 8, MoveType::Water, "assets/sounds/splash.wav"),
-        Move("Leaf Cut", 12, MoveType::Grass, "assets/sounds/leaf.wav")
+    Move("Tackle", 10, MoveType::Normal, "assets/sounds/tackle.wav", 1, 9),
+    Move("Flame", 14, MoveType::Fire, "assets/sounds/flame.wav", 2, 9),
+    Move("Splash", 8, MoveType::Water, "assets/sounds/splash.wav", 3, 9),
+    Move("Leaf Cut", 12, MoveType::Grass, "assets/sounds/leaf.wav", 4, 9)
     };
 
     std::vector<Move> eMoves = {
@@ -88,6 +88,9 @@ void Battle::handleEvent(const sf::Event& event)
                 const Move& mv = player->getMoves()[choice];
                 int damage = std::max(1, mv.power + player->getAttack() - enemy->getDefense());
 
+                // Animación de ataque del jugador: fila 1, cuatro cuadros.
+                player->playAnimation(1, 4);
+
                 // reproducir sonido si existe (comentado - no hay Audio en SFML 2.6)
                 // sf::SoundBuffer buffer;
                 // if (buffer.loadFromFile(mv.soundPath))
@@ -115,12 +118,19 @@ void Battle::handleEvent(const sf::Event& event)
 
 void Battle::update()
 {
+    // Actualizar animaciones en cada frame
+    if (player) player->updateAnimation();
+    if (enemy) enemy->updateAnimation();
+
     if (state == BattleState::ENEMY_ATTACK && !finished)
     {
         std::uniform_int_distribution<int> dist(0, 3);
         int choice = dist(rng);
         const Move& mv = enemy->getMoves()[choice];
         int damage = std::max(1, mv.power + enemy->getAttack() - player->getDefense());
+
+        // Animación de ataque del enemigo: fila 1, cuatro cuadros.
+        enemy->playAnimation(1, 4);
 
         // reproducir sonido si existe (comentado - no hay Audio en SFML 2.6)
         // sf::SoundBuffer buffer;
