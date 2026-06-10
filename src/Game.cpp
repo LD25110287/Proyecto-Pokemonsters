@@ -4,9 +4,9 @@
 #include <memory>
 #include <iostream>
 
-#include "../include/Move.h"
-#include "../include/Pokemonster.h"
-#include "../include/BattleUI.h"
+#include "Move.h"
+#include "Pokemonster.h"
+#include "BattleUI.h"
 
 enum class BattleState { WAITING_PLAYER, PLAYER_ATTACK, ENEMY_ATTACK };
 
@@ -60,8 +60,8 @@ void Battle::init()
     enemy = &enemyP;
 
     // intentamos cargar texturas (si existen)
-    player->loadTexture("assets/images/1.png");
-    enemy->loadTexture("assets/images/2.png");
+    player->loadSpriteSheet("assets/images/1.png", 50, 50);
+    enemy->loadSpriteSheet("assets/images/2.png",100, 100);
 
     player->setPosition(100.f, 300.f);
     enemy->setPosition(500.f, 80.f);

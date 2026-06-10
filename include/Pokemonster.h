@@ -12,7 +12,8 @@ public:
     Pokemonster();
     Pokemonster(const std::string& name, int hpMax, int attack, int defense, const std::vector<Move>& moves);
 
-    bool loadTexture(const std::string& path);
+    bool loadSpriteSheet(const std::string& path, int fWidth, int fHeight);
+    void setFrame(int row, int col);
     void setPosition(float x, float y);
 
     void takeDamage(int damage);
@@ -37,6 +38,8 @@ private:
 
     sf::Texture texture;
     sf::Sprite sprite;
+    int frameWidth;
+    int frameHeight;
 };
 
 #endif // POKEMONSTER_H
