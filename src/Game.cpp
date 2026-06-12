@@ -63,10 +63,10 @@ void Battle::init()
 
     // Crear movimientos de Jugador 2 (Bulbasaur)
     std::vector<Move> eMoves = {
-        Move("Bite", 11, MoveType::Normal, "assets/sounds/bite.wav"),
-        Move("Ember", 13, MoveType::Fire, "assets/sounds/ember.wav"),
-        Move("Water Jet", 9, MoveType::Water, "assets/sounds/waterjet.wav"),
-        Move("Vine Lash", 12, MoveType::Grass, "assets/sounds/vinelash.wav")
+        Move("Bite", 11, MoveType::Normal, "assets/sounds/bite.wav", 1, 9),
+        Move("Ember", 13, MoveType::Fire, "assets/sounds/ember.wav", 2, 9),
+        Move("Water Jet", 9, MoveType::Water, "assets/sounds/waterjet.wav", 3, 9),
+        Move("Vine Lash", 12, MoveType::Grass, "assets/sounds/vinelash.wav", 4, 9)
     };
 
     // Crear Pokémons
