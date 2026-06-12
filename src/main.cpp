@@ -1,5 +1,5 @@
-#include "Game.h"
-#include "MenuScreen.h"
+#include "../include/Game.h"
+#include "../include/MenuScreen.h"
 
 int main()
 {

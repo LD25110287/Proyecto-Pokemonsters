@@ -1,6 +1,13 @@
 #ifndef MENUSCREEN_H
 #define MENUSCREEN_H
 
+// ── BUG 3 FIX ────────────────────────────────────────────────────────────────
+// Se eliminó el forward include de Game.h que estaba en el .cpp original.
+// MenuScreen NO debe conocer a Game; esa dependencia circular evitaba que
+// el linker pudiera resolver los símbolos del menú correctamente.
+// main.cpp es quien orquesta la secuencia Menu → Game, no el propio menú.
+// ─────────────────────────────────────────────────────────────────────────────
+
 #include <SFML/Graphics.hpp>
 #include <vector>
 
@@ -22,7 +29,7 @@ private:
     void loadAssets();
     void createMenuButtons();
     void updateButtonHover(const sf::Vector2i& mousePos);
-    int getButtonAtPosition(const sf::Vector2i& mousePos) const;
+    int  getButtonAtPosition(const sf::Vector2i& mousePos) const;
     void handleMainMenuClick(int index);
     void drawMainMenu();
     void drawCharactersScreen();
@@ -31,15 +38,18 @@ private:
     void handleSubmenuEvents(const sf::Event& event);
 
     sf::RenderWindow window;
-    sf::Font font;
-    sf::Text titleText;
+    sf::Font         font;
+    sf::Text         titleText;
+
     std::vector<sf::RectangleShape> buttons;
-    std::vector<sf::Text> buttonTexts;
+    std::vector<sf::Text>           buttonTexts;
+
     sf::RectangleShape backButton;
-    sf::Text backText;
+    sf::Text           backText;
+
     MenuState state;
-    int hoveredButton;
-    bool launchGame;
+    int       hoveredButton;
+    bool      launchGame;
 };
 
 #endif // MENUSCREEN_H

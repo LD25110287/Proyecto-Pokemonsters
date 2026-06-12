@@ -3,15 +3,21 @@
 #include <iostream>
 
 Pokemonster::Pokemonster()
-    : name(""), hpMax(1), hpActual(1), attackStat(1), defense(0), moves(), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0), maxFrames(0), frameDuration(0.1f), isAttacking(false)
+    : name(""), hpMax(1), hpActual(1), attackStat(1), defense(0), moves(),
+      frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
+      maxFrames(0), frameDuration(0.1f), isAttacking(false),
+      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr)
 {
 }
 
-Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack, int defense, const std::vector<Move>& moves)
-    : name(name), hpMax(hpMax), hpActual(hpMax), attackStat(attack), defense(defense), moves(moves), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0), maxFrames(0), frameDuration(0.1f), isAttacking(false)
+Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack, int defense,
+                         const std::vector<Move>& moves)
+    : name(name), hpMax(hpMax), hpActual(hpMax), attackStat(attack), defense(defense),
+      moves(moves), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
+      maxFrames(0), frameDuration(0.1f), isAttacking(false),
+      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr)
 {
 }
-
 
 bool Pokemonster::loadSpriteSheet(const std::string& path, int fWidth, int fHeight)
 {
@@ -22,31 +28,25 @@ bool Pokemonster::loadSpriteSheet(const std::string& path, int fWidth, int fHeig
     }
 
     sprite.setTexture(texture);
-    frameWidth = fWidth;
+    frameWidth  = fWidth;
     frameHeight = fHeight;
     sprite.setTextureRect(sf::IntRect(0, 0, frameWidth, frameHeight));
-
     return true;
 }
 
 void Pokemonster::setFrame(int row, int col)
 {
-    // Cada cuadro del sprite sheet está ordenado en una cuadrícula.
-    // La posición X se calcula con la columna multiplicada por el ancho del cuadro,
-    // y la posición Y con la fila multiplicada por la altura del cuadro.
     int x = col * frameWidth;
     int y = row * frameHeight;
-
-    sf::IntRect frameRect(x, y, frameWidth, frameHeight);
-    sprite.setTextureRect(frameRect);
+    sprite.setTextureRect(sf::IntRect(x, y, frameWidth, frameHeight));
 }
 
 void Pokemonster::playAnimation(int row, int framesAmount)
 {
-    currentRow = row;
-    maxFrames = framesAmount;
+    currentRow   = row;
+    maxFrames    = framesAmount;
     currentFrame = 0;
-    isAttacking = true;
+    isAttacking  = true;
     animClock.restart();
     setFrame(currentRow, currentFrame);
 }
@@ -54,8 +54,7 @@ void Pokemonster::playAnimation(int row, int framesAmount)
 void Pokemonster::updateAnimation()
 {
     if (!isAttacking) return;
-    if (frameDuration <= 0.f || maxFrames <= 0)
-        return;
+    if (frameDuration <= 0.f || maxFrames <= 0) return;
 
     if (animClock.getElapsedTime().asSeconds() >= frameDuration)
     {
@@ -63,11 +62,21 @@ void Pokemonster::updateAnimation()
 
         if (currentFrame >= maxFrames)
         {
-            if (isAttacking)
+            // ── BUG 1 FIX ──────────────────────────────────────────────────
+            // El daño AHORA se aplica cuando la animación de ataque termina,
+            // NO al inicio. Así el HP del enemigo no baja al mismo tiempo
+            // que el del jugador.
+            if (hasPendingDamage && damageTarget != nullptr)
             {
-                currentRow = 0; // Volver a Idle cuando la animación de ataque termina.
-                isAttacking = false;
+                damageTarget->takeDamage(pendingDamage);
+                hasPendingDamage = false;
+                damageTarget     = nullptr;
+                pendingDamage    = 0;
             }
+            // ───────────────────────────────────────────────────────────────
+
+            currentRow  = 0;   // volver a fila idle
+            isAttacking = false;
             currentFrame = 0;
         }
 
@@ -78,7 +87,8 @@ void Pokemonster::updateAnimation()
 
 void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 {
-    if (selectedMoveIndex < 0 || selectedMoveIndex >= static_cast<int>(moves.size()))
+    if (selectedMoveIndex < 0 ||
+        selectedMoveIndex >= static_cast<int>(moves.size()))
     {
         std::cerr << "Invalid move index: " << selectedMoveIndex << std::endl;
         return;
@@ -86,16 +96,26 @@ void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 
     const Move& selectedMove = moves[selectedMoveIndex];
 
-    // Reproducir animación específica del ataque basado en la fila y cantidad de cuadros del Move.
+    // ── BUG 2 FIX ──────────────────────────────────────────────────────────
+    // Cada movimiento tiene su propia fila (animationRow) y cantidad de
+    // frames (frameCount) definidos en Move.h. Aquí se usa esa info para
+    // reproducir la animación correcta según la habilidad seleccionada.
     playAnimation(selectedMove.animationRow, selectedMove.frameCount);
+    // ───────────────────────────────────────────────────────────────────────
 
-    int damage = std::max(1, selectedMove.power + attackStat - target.getDefense());
-    target.takeDamage(damage);
+    // ── BUG 1 FIX: guardar daño como pendiente ─────────────────────────────
+    // El daño se calcula ahora pero se guarda; se aplica al final de la
+    // animación en updateAnimation(), no de forma inmediata.
+    int damage       = std::max(1, selectedMove.power + attackStat - target.getDefense());
+    pendingDamage    = damage;
+    damageTarget     = &target;
+    hasPendingDamage = true;
+    // ───────────────────────────────────────────────────────────────────────
 }
 
 void Pokemonster::setPosition(float x, float y)
 {
-    sprite.setPosition(x, y);
+    sprite.setPosition({x, y});
 }
 
 void Pokemonster::takeDamage(int damage)
@@ -104,16 +124,13 @@ void Pokemonster::takeDamage(int damage)
     if (hpActual < 0) hpActual = 0;
 }
 
-bool Pokemonster::isFainted() const
-{
-    return hpActual <= 0;
-}
+bool Pokemonster::isFainted() const { return hpActual <= 0; }
 
-const std::vector<Move>& Pokemonster::getMoves() const { return moves; }
-const std::string& Pokemonster::getName() const { return name; }
-int Pokemonster::getHP() const { return hpActual; }
-int Pokemonster::getHPMax() const { return hpMax; }
-int Pokemonster::getAttack() const { return attackStat; }
+const std::vector<Move>& Pokemonster::getMoves()  const { return moves; }
+const std::string&        Pokemonster::getName()   const { return name; }
+int Pokemonster::getHP()      const { return hpActual; }
+int Pokemonster::getHPMax()   const { return hpMax; }
+int Pokemonster::getAttack()  const { return attackStat; }
 int Pokemonster::getDefense() const { return defense; }
 
 void Pokemonster::draw(sf::RenderTarget& target, sf::RenderStates states) const

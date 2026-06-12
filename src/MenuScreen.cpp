@@ -1,6 +1,7 @@
-#include "MenuScreen.h"
-#include "Game.h"
+#include "../include/MenuScreen.h"
 #include <iostream>
+
+// Sin #include "Game.h" — dependencia circular eliminada (BUG 3 FIX)
 
 MenuScreen::MenuScreen()
     : window(sf::VideoMode(800, 600), "Pokemonsters", sf::Style::Close),
@@ -8,6 +9,7 @@ MenuScreen::MenuScreen()
       hoveredButton(-1),
       launchGame(false)
 {
+    window.setFramerateLimit(60);
     loadAssets();
     createMenuButtons();
 
@@ -18,7 +20,7 @@ MenuScreen::MenuScreen()
     titleText.setStyle(sf::Text::Bold);
     titleText.setPosition(70.f, 40.f);
 
-    backButton.setSize({180.f, 45.f});
+    backButton.setSize(sf::Vector2f(180.f, 45.f));
     backButton.setFillColor(sf::Color(180, 0, 0));
     backButton.setOutlineColor(sf::Color::White);
     backButton.setOutlineThickness(2.f);
@@ -33,13 +35,10 @@ MenuScreen::MenuScreen()
 
 void MenuScreen::loadAssets()
 {
-    // CORRECCIÓN: Se prueban múltiples rutas hasta encontrar una fuente válida.
-    // Agrega aquí cualquier fuente .ttf que tengas en tu proyecto.
     std::vector<std::string> fontPaths = {
         "assets/fonts/arial.ttf",
         "assets/fonts/pokemon.ttf",
         "assets/fonts/font.ttf",
-        // Rutas del sistema Windows como respaldo
         "C:/Windows/Fonts/arial.ttf",
         "C:/Windows/Fonts/calibri.ttf",
         "C:/Windows/Fonts/tahoma.ttf",
@@ -58,19 +57,16 @@ void MenuScreen::loadAssets()
     }
 
     if (!loaded)
-    {
-        std::cerr << "ERROR CRITICO: No se pudo cargar ninguna fuente.\n";
-        std::cerr << "Agrega un archivo .ttf en assets/fonts/ con el nombre arial.ttf\n";
-    }
+        std::cerr << "ERROR: No se pudo cargar ninguna fuente. Agrega arial.ttf en assets/fonts/\n";
 }
 
 void MenuScreen::createMenuButtons()
 {
-    const float buttonWidth = 360.f;
+    const float buttonWidth  = 360.f;
     const float buttonHeight = 60.f;
-    const float startX = (window.getSize().x - buttonWidth) / 2.f;
-    const float startY = 200.f;
-    const float spacing = 80.f;
+    const float startX       = (window.getSize().x - buttonWidth) / 2.f;
+    const float startY       = 200.f;
+    const float spacing      = 80.f;
 
     std::vector<std::string> labels = {"Jugar", "Personajes", "Configuracion", "Salir"};
 
@@ -79,7 +75,7 @@ void MenuScreen::createMenuButtons()
 
     for (size_t i = 0; i < labels.size(); ++i)
     {
-        buttons[i].setSize({buttonWidth, buttonHeight});
+        buttons[i].setSize(sf::Vector2f(buttonWidth, buttonHeight));
         buttons[i].setFillColor(sf::Color(200, 0, 0));
         buttons[i].setOutlineColor(sf::Color::White);
         buttons[i].setOutlineThickness(3.f);
@@ -90,8 +86,10 @@ void MenuScreen::createMenuButtons()
         buttonTexts[i].setCharacterSize(28);
         buttonTexts[i].setFillColor(sf::Color::White);
         buttonTexts[i].setStyle(sf::Text::Bold);
-        float textX = startX + (buttonWidth - buttonTexts[i].getLocalBounds().width) / 2.f - 8.f;
-        float textY = startY + i * spacing + (buttonHeight - buttonTexts[i].getLocalBounds().height) / 2.f - 8.f;
+
+        float textX = startX + (buttonWidth  - buttonTexts[i].getLocalBounds().width)  / 2.f - 8.f;
+        float textY = startY + i * spacing +
+                     (buttonHeight - buttonTexts[i].getLocalBounds().height) / 2.f - 8.f;
         buttonTexts[i].setPosition(textX, textY);
     }
 }
@@ -123,32 +121,22 @@ void MenuScreen::handleMainMenuClick(int index)
 {
     switch (index)
     {
-        case 0: // Jugar — cierra el menú y lanza el juego
-            launchGame = true;
-            window.close();
-            break;
-        case 1: // Personajes
-            state = MenuState::CHARACTERS;
-            break;
-        case 2: // Configuración
-            state = MenuState::SETTINGS;
-            break;
-        case 3: // Salir — cierra sin lanzar el juego
-            launchGame = false;
-            window.close();
-            break;
+        case 0: launchGame = true;  window.close();          break;
+        case 1: state = MenuState::CHARACTERS;               break;
+        case 2: state = MenuState::SETTINGS;                 break;
+        case 3: launchGame = false; window.close();          break;
     }
 }
 
 void MenuScreen::handleSubmenuEvents(const sf::Event& event)
 {
-    if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+    // API SFML 2
+    if (event.type == sf::Event::MouseButtonPressed &&
+        event.mouseButton.button == sf::Mouse::Left)
     {
         sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
         if (backButton.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
-        {
             state = MenuState::MAIN_MENU;
-        }
     }
 }
 
@@ -169,7 +157,6 @@ void MenuScreen::drawMainMenu()
             buttons[i].setFillColor(sf::Color(200, 0, 0));
             buttons[i].setOutlineColor(sf::Color::White);
         }
-
         window.draw(buttons[i]);
         window.draw(buttonTexts[i]);
     }
@@ -245,6 +232,7 @@ void MenuScreen::run()
 {
     while (window.isOpen())
     {
+        // API SFML 2
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -256,9 +244,11 @@ void MenuScreen::run()
                 if (event.type == sf::Event::MouseMoved)
                     updateButtonHover(sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
 
-                if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+                if (event.type == sf::Event::MouseButtonPressed &&
+                    event.mouseButton.button == sf::Mouse::Left)
                 {
-                    int idx = getButtonAtPosition(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    int idx = getButtonAtPosition(
+                        sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
                     if (idx >= 0)
                         handleMainMenuClick(idx);
                 }
@@ -271,12 +261,9 @@ void MenuScreen::run()
 
         if (!window.isOpen()) break;
 
-        if (state == MenuState::MAIN_MENU)
-            drawMainMenu();
-        else if (state == MenuState::CHARACTERS)
-            drawCharactersScreen();
-        else if (state == MenuState::SETTINGS)
-            drawSettingsScreen();
+        if      (state == MenuState::MAIN_MENU)   drawMainMenu();
+        else if (state == MenuState::CHARACTERS)  drawCharactersScreen();
+        else if (state == MenuState::SETTINGS)    drawSettingsScreen();
     }
 }
 
