@@ -9,6 +9,7 @@ class MenuScreen
 public:
     MenuScreen();
     void run();
+    bool shouldLaunchGame() const;
 
 private:
     enum class MenuState
@@ -38,6 +39,7 @@ private:
     sf::Text backText;
     MenuState state;
     int hoveredButton;
+    bool launchGame;
 };
 
 #endif // MENUSCREEN_H

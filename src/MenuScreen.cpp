@@ -6,7 +6,8 @@
 MenuScreen::MenuScreen()
     : window(sf::VideoMode(800, 600), "Pokemonsters", sf::Style::Close),
       state(MenuState::MAIN_MENU),
-      hoveredButton(-1)
+      hoveredButton(-1),
+      launchGame(false)
 {
     // Cargar fuente de la carpeta de assets o mostrar advertencia si no existe
     loadAssets();
@@ -101,12 +102,9 @@ void MenuScreen::handleMainMenuClick(int index)
     switch (index)
     {
         case 0: // Jugar
-        {
+            launchGame = true;
             window.close();
-            Game game;
-            game.run();
             break;
-        }
         case 1: // Personajes
             state = MenuState::CHARACTERS;
             break;
@@ -114,6 +112,7 @@ void MenuScreen::handleMainMenuClick(int index)
             state = MenuState::SETTINGS;
             break;
         case 3: // Salir
+            launchGame = false;
             window.close();
             break;
     }
@@ -268,4 +267,9 @@ void MenuScreen::run()
             drawSettingsScreen();
         }
     }
+}
+
+bool MenuScreen::shouldLaunchGame() const
+{
+    return launchGame;
 }
