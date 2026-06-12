@@ -1,6 +1,5 @@
 #include "MenuScreen.h"
 #include "Game.h"
-
 #include <iostream>
 
 MenuScreen::MenuScreen()
@@ -9,7 +8,6 @@ MenuScreen::MenuScreen()
       hoveredButton(-1),
       launchGame(false)
 {
-    // Cargar fuente de la carpeta de assets o mostrar advertencia si no existe
     loadAssets();
     createMenuButtons();
 
@@ -20,7 +18,6 @@ MenuScreen::MenuScreen()
     titleText.setStyle(sf::Text::Bold);
     titleText.setPosition(70.f, 40.f);
 
-    // Botón de regreso para subpantallas
     backButton.setSize({180.f, 45.f});
     backButton.setFillColor(sf::Color(180, 0, 0));
     backButton.setOutlineColor(sf::Color::White);
@@ -36,9 +33,34 @@ MenuScreen::MenuScreen()
 
 void MenuScreen::loadAssets()
 {
-    if (!font.loadFromFile("assets/fonts/arial.ttf"))
+    // CORRECCIÓN: Se prueban múltiples rutas hasta encontrar una fuente válida.
+    // Agrega aquí cualquier fuente .ttf que tengas en tu proyecto.
+    std::vector<std::string> fontPaths = {
+        "assets/fonts/arial.ttf",
+        "assets/fonts/pokemon.ttf",
+        "assets/fonts/font.ttf",
+        // Rutas del sistema Windows como respaldo
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibri.ttf",
+        "C:/Windows/Fonts/tahoma.ttf",
+        "C:/Windows/Fonts/verdana.ttf"
+    };
+
+    bool loaded = false;
+    for (const auto& path : fontPaths)
     {
-        std::cerr << "Warning: No se pudo cargar assets/fonts/arial.ttf. Se usará fuente por defecto.\n";
+        if (font.loadFromFile(path))
+        {
+            std::cout << "Fuente cargada desde: " << path << "\n";
+            loaded = true;
+            break;
+        }
+    }
+
+    if (!loaded)
+    {
+        std::cerr << "ERROR CRITICO: No se pudo cargar ninguna fuente.\n";
+        std::cerr << "Agrega un archivo .ttf en assets/fonts/ con el nombre arial.ttf\n";
     }
 }
 
@@ -50,7 +72,7 @@ void MenuScreen::createMenuButtons()
     const float startY = 200.f;
     const float spacing = 80.f;
 
-    std::vector<std::string> labels = {"Jugar", "Personajes", "Configuraci\xF3n", "Salir"};
+    std::vector<std::string> labels = {"Jugar", "Personajes", "Configuracion", "Salir"};
 
     buttons.resize(labels.size());
     buttonTexts.resize(labels.size());
@@ -101,7 +123,7 @@ void MenuScreen::handleMainMenuClick(int index)
 {
     switch (index)
     {
-        case 0: // Jugar
+        case 0: // Jugar — cierra el menú y lanza el juego
             launchGame = true;
             window.close();
             break;
@@ -111,7 +133,7 @@ void MenuScreen::handleMainMenuClick(int index)
         case 2: // Configuración
             state = MenuState::SETTINGS;
             break;
-        case 3: // Salir
+        case 3: // Salir — cierra sin lanzar el juego
             launchGame = false;
             window.close();
             break;
@@ -133,7 +155,6 @@ void MenuScreen::handleSubmenuEvents(const sf::Event& event)
 void MenuScreen::drawMainMenu()
 {
     window.clear(sf::Color(18, 18, 32));
-
     window.draw(titleText);
 
     for (size_t i = 0; i < buttons.size(); ++i)
@@ -167,7 +188,7 @@ void MenuScreen::drawCharactersScreen()
     window.draw(header);
 
     std::vector<std::string> lines = {
-        "- Pikachu: El eléctrico explorador",
+        "- Pikachu: El electrico explorador",
         "- Bulbasaur: Planta fuerte y resistente",
         "- Charmander: Fuego ardiente",
         "- Squirtle: Agua refrescante"
@@ -189,7 +210,7 @@ void MenuScreen::drawSettingsScreen()
 {
     window.clear(sf::Color(20, 22, 40));
 
-    sf::Text header("Configuraci\xF3n", font, 42);
+    sf::Text header("Configuracion", font, 42);
     header.setFillColor(sf::Color(255, 215, 0));
     header.setStyle(sf::Text::Bold);
     header.setPosition(40.f, 40.f);
@@ -197,9 +218,9 @@ void MenuScreen::drawSettingsScreen()
 
     std::vector<std::string> lines = {
         "- Volumen: Ajusta el sonido del juego",
-        "- Pantalla: Activa modo ventana o pantalla completa",
-        "- Controles: Personaliza teclas y acceso rapido",
-        "- Idioma: Cambia entre español e ingles"
+        "- Pantalla: Modo ventana o pantalla completa",
+        "- Controles: Personaliza teclas",
+        "- Idioma: Espanol o Ingles"
     };
 
     for (size_t i = 0; i < lines.size(); ++i)
@@ -233,16 +254,13 @@ void MenuScreen::run()
             if (state == MenuState::MAIN_MENU)
             {
                 if (event.type == sf::Event::MouseMoved)
-                {
                     updateButtonHover(sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
-                }
+
                 if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
                 {
-                    int buttonIndex = getButtonAtPosition(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
-                    if (buttonIndex >= 0)
-                    {
-                        handleMainMenuClick(buttonIndex);
-                    }
+                    int idx = getButtonAtPosition(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    if (idx >= 0)
+                        handleMainMenuClick(idx);
                 }
             }
             else
@@ -251,21 +269,14 @@ void MenuScreen::run()
             }
         }
 
-        if (!window.isOpen())
-            break;
+        if (!window.isOpen()) break;
 
         if (state == MenuState::MAIN_MENU)
-        {
             drawMainMenu();
-        }
         else if (state == MenuState::CHARACTERS)
-        {
             drawCharactersScreen();
-        }
         else if (state == MenuState::SETTINGS)
-        {
             drawSettingsScreen();
-        }
     }
 }
 
