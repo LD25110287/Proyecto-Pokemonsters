@@ -21,6 +21,7 @@ set(SOURCES
     src/Game.cpp
     src/Pokemonster.cpp
     src/BattleUI.cpp
+    src/MenuScreen.cpp
 )
 
 # Crear ejecutable
