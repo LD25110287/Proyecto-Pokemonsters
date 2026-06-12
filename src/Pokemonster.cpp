@@ -53,6 +53,7 @@ void Pokemonster::playAnimation(int row, int framesAmount)
 
 void Pokemonster::updateAnimation()
 {
+    if (!isAttacking) return;
     if (frameDuration <= 0.f || maxFrames <= 0)
         return;
 
