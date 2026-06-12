@@ -1,254 +1,44 @@
-#include "Game.h"
+﻿#include "Game.h"
+#include "Move.h"
 
-#include <random>
-#include <memory>
 #include <iostream>
 
-#include "Move.h"
-#include "Pokemonster.h"
-#include "BattleUI.h"
-
-// ============= MÁQUINA DE ESTADOS MULTIJUGADOR =============
-enum class BattleState 
+Game::Game()
+    : window(sf::VideoMode(800, 600), "Pokemon Game - Multiplayer")
+    , isRunning(true)
+    , currentTurn(TurnState::PLAYER_TURN)
+    , waitingForPlayer(true)
+    , animationPlaying(false)
+    , enemyAttackScheduled(false)
+    , player()
+    , enemy()
+    , battleUI(window.getSize())
 {
-    P1_TURN,          // Esperando clic del Jugador 1
-    P1_ANIMATING,     // Animación del Jugador 1 en curso
-    P2_TURN,          // Esperando clic del Jugador 2
-    P2_ANIMATING      // Animación del Jugador 2 en curso
-};
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-class Battle
-{
-public:
-    Battle(sf::RenderWindow& win)
-        : window(win), ui(win.getSize()), player(nullptr), enemy(nullptr), 
-          state(BattleState::P1_TURN), rng(std::random_device{}()),
-          pendingMove(-1)
-    {
-    }
+    // Crear jugador con 4 movimientos
+    player = Pokemonster("Pikachu", 100, 20, 5, {
+        Move("Impactrueno", 40, MoveType::Electric, "", 0, 4),
+        Move("Rayo", 55, MoveType::Electric, "", 1, 3),
+        Move("Voltio Cruel", 70, MoveType::Electric, "", 2, 5),
+        Move("Gruñido", 0, MoveType::Normal, "", 3, 2)
+    });
 
-    void init();
-    void handleEvent(const sf::Event& event);
-    void update();
-    void render();
-    bool isFinished() const { return finished; }
+    // Crear enemigo con 4 movimientos
+    enemy = Pokemonster("Charmander", 90, 18, 4, {
+        Move("Ascuas", 40, MoveType::Fire, "", 0, 4),
+        Move("Llamarada", 60, MoveType::Fire, "", 1, 4),
+        Move("Arañazo", 35, MoveType::Normal, "", 2, 3),
+        Move("Rugido", 0, MoveType::Normal, "", 3, 2)
+    });
 
-private:
-    sf::RenderWindow& window;
-    BattleUI ui;
-    Pokemonster* player;
-    Pokemonster* enemy;
-    BattleState state;
-    bool finished = false;
+    player.setPosition(150.f, 300.f);
+    enemy.setPosition(500.f, 150.f);
 
-    std::mt19937 rng;
-
-    // Movimiento pendiente del jugador actual
-    int pendingMove;
-
-    // Función helper para actualizar la UI con los movimientos del Pokémon actual
-    void updateUIForCurrentPlayer();
-};
-
-// ============= INICIALIZACIÓN =============
-void Battle::init()
-{
-    // Crear movimientos de Jugador 1 (Pikachu)
-    std::vector<Move> pMoves = {
-        Move("Tackle", 10, MoveType::Normal, "assets/sounds/tackle.wav", 1, 9),
-        Move("Flame", 14, MoveType::Fire, "assets/sounds/flame.wav", 2, 9),
-        Move("Splash", 8, MoveType::Water, "assets/sounds/splash.wav", 3, 9),
-        Move("Leaf Cut", 12, MoveType::Grass, "assets/sounds/leaf.wav", 4, 9)
-    };
-
-    // Crear movimientos de Jugador 2 (Bulbasaur)
-    std::vector<Move> eMoves = {
-        Move("Bite", 11, MoveType::Normal, "assets/sounds/bite.wav", 1, 9),
-        Move("Ember", 13, MoveType::Fire, "assets/sounds/ember.wav", 2, 9),
-        Move("Water Jet", 9, MoveType::Water, "assets/sounds/waterjet.wav", 3, 9),
-        Move("Vine Lash", 12, MoveType::Grass, "assets/sounds/vinelash.wav", 4, 9)
-    };
-
-    // Crear Pokémons
-    static Pokemonster playerP("Pikachu", 100, 20, 10, pMoves);
-    static Pokemonster enemyP("Bulbasaur", 90, 18, 8, eMoves);
-
-    player = &playerP;
-    enemy = &enemyP;
-
-    // Cargar sprites
-    player->loadSpriteSheet("assets/images/1.png", 50, 50);
-    enemy->loadSpriteSheet("assets/images/2.png", 100, 100);
-
-    player->setPosition(100.f, 300.f);
-    enemy->setPosition(500.f, 80.f);
-
-    ui.setPlayerPokemon(player);
-    ui.setEnemyPokemon(enemy);
-    ui.update();
-
-    // Iniciar mostrando los movimientos del Jugador 1
-    updateUIForCurrentPlayer();
-    std::cout << "\n=== MULTIJUGADOR LOCAL - ASIENTO CALIENTE ===\n";
-    std::cout << "Player 1 (Pikachu) - Your turn!\n\n";
-}
-
-// ============= MANEJADOR DE EVENTOS =============
-void Battle::handleEvent(const sf::Event& event)
-{
-    if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
-    {
-        sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
-        int choice = ui.handleMouseClick(mousePos);
-        
-        // Turno del Jugador 1 (player)
-        if (state == BattleState::P1_TURN && choice >= 0 && choice < 4)
-        {
-            pendingMove = choice;
-            state = BattleState::P1_ANIMATING;
-            player->playAnimation(1, 4);
-            
-            const Move& mv = player->getMoves()[choice];
-            std::cout << "\n[P1 TURN] " << player->getName() << " uses " << mv.name << "!\n";
-        }
-        // Turno del Jugador 2 (enemy)
-        else if (state == BattleState::P2_TURN && choice >= 0 && choice < 4)
-        {
-            pendingMove = choice;
-            state = BattleState::P2_ANIMATING;
-            enemy->playAnimation(1, 4);
-            
-            const Move& mv = enemy->getMoves()[choice];
-            std::cout << "\n[P2 TURN] " << enemy->getName() << " uses " << mv.name << "!\n";
-        }
-    }
-}
-
-// ============= ACTUALIZAR UI PARA JUGADOR ACTUAL =============
-void Battle::updateUIForCurrentPlayer()
-{
-    if (state == BattleState::P1_TURN)
-    {
-        // Mostrar movimientos del Jugador 1 (player)
-        ui.updateMoveButtons(player);
-        std::cout << "[UI UPDATE] Showing Player 1 moves\n";
-    }
-    else if (state == BattleState::P2_TURN)
-    {
-        // Mostrar movimientos del Jugador 2 (enemy)
-        ui.updateMoveButtons(enemy);
-        std::cout << "[UI UPDATE] Showing Player 2 moves\n";
-    }
-}
-
-// ============= BUCLE DE ACTUALIZACIÓN =============
-void Battle::update()
-{
-    // SIEMPRE actualizar las animaciones en cada frame
-    if (player) player->updateAnimation();
-    if (enemy) enemy->updateAnimation();
-
-    // Máquina de estados para multijugador local
-    switch (state)
-    {
-        case BattleState::P1_TURN:
-            // Esperando que el Jugador 1 haga clic
-            break;
-
-        case BattleState::P1_ANIMATING:
-            // Animación del Jugador 1 ejecutándose
-            if (!player->isAnimating())
-            {
-                // ✅ Animación terminó -> Aplicar daño al Jugador 2
-                if (pendingMove >= 0 && pendingMove < 4)
-                {
-                    const Move& mv = player->getMoves()[pendingMove];
-                    int damage = std::max(1, mv.power + player->getAttack() - enemy->getDefense());
-                    
-                    enemy->takeDamage(damage);
-                    ui.update();
-                    std::cout << "[DAMAGE] " << damage << " to Player 2! P2 HP: " 
-                              << enemy->getHP() << "/" << enemy->getHPMax() << "\n";
-                }
-
-                // Verificar si P2 se debilitó
-                if (enemy->isFainted())
-                {
-                    std::cout << "\n🎉 Player 2 fainted! Player 1 wins!\n";
-                    finished = true;
-                }
-                else
-                {
-                    // Transicionar al turno del Jugador 2
-                    state = BattleState::P2_TURN;
-                    updateUIForCurrentPlayer();
-                    std::cout << "\n>>> Passing control to Player 2 <<<\n";
-                }
-                
-                pendingMove = -1;
-            }
-            break;
-
-        case BattleState::P2_TURN:
-            // Esperando que el Jugador 2 haga clic
-            break;
-
-        case BattleState::P2_ANIMATING:
-            // Animación del Jugador 2 ejecutándose
-            if (!enemy->isAnimating())
-            {
-                // ✅ Animación terminó -> Aplicar daño al Jugador 1
-                if (pendingMove >= 0 && pendingMove < 4)
-                {
-                    const Move& mv = enemy->getMoves()[pendingMove];
-                    int damage = std::max(1, mv.power + enemy->getAttack() - player->getDefense());
-                    
-                    player->takeDamage(damage);
-                    ui.update();
-                    std::cout << "[DAMAGE] " << damage << " to Player 1! P1 HP: " 
-                              << player->getHP() << "/" << player->getHPMax() << "\n";
-                }
-
-                // Verificar si P1 se debilitó
-                if (player->isFainted())
-                {
-                    std::cout << "\n🎉 Player 1 fainted! Player 2 wins!\n";
-                    finished = true;
-                }
-                else
-                {
-                    // Transicionar al turno del Jugador 1
-                    state = BattleState::P1_TURN;
-                    updateUIForCurrentPlayer();
-                    std::cout << "\n>>> Passing control to Player 1 <<<\n";
-                }
-                
-                pendingMove = -1;
-            }
-            break;
-    }
-}
-
-// ============= RENDERIZADO =============
-void Battle::render()
-{
-    window.clear(sf::Color(30, 30, 30));
-
-    // Dibujar pokémons
-    if (enemy) window.draw(*enemy);
-    if (player) window.draw(*player);
-
-    // Dibujar UI encima
-    ui.draw(window);
-
-    window.display();
-}
-
-// ============= CLASE GAME =============
-Game::Game() : isRunning(true)
-{
-    window.create(sf::VideoMode({800, 600}), "Pokemon Game - Multiplayer");
-    window.setFramerateLimit(60);
+    battleUI.setPlayerPokemon(&player);
+    battleUI.setEnemyPokemon(&enemy);
+    battleUI.updateMoveButtons(&player);
+    battleUI.update();
 }
 
 Game::~Game()
@@ -258,10 +48,7 @@ Game::~Game()
 
 void Game::run()
 {
-    Battle battle(window);
-    battle.init();
-
-    while (window.isOpen() && isRunning && !battle.isFinished())
+    while (window.isOpen() && isRunning && currentTurn != TurnState::BATTLE_OVER)
     {
         sf::Event event;
         while (window.pollEvent(event))
@@ -277,24 +64,76 @@ void Game::run()
                 isRunning = false;
             }
 
-            // Pasar evento a la batalla
-            battle.handleEvent(event);
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            {
+                if (currentTurn == TurnState::PLAYER_TURN && waitingForPlayer && !animationPlaying)
+                {
+                    sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
+                    int moveIndex = battleUI.handleMouseClick(mousePos);
+                    if (moveIndex >= 0)
+                    {
+                        player.attack(enemy, moveIndex);
+                        animationPlaying = true;
+                        waitingForPlayer = false;
+                        currentTurn = TurnState::ENEMY_TURN;
+                        enemyAttackScheduled = true;
+                        turnClock.restart();
+                    }
+                }
+            }
         }
 
-        battle.update();
-        battle.render();
+        update();
+        render();
     }
 }
 
 void Game::handleEvents()
 {
-    // Ahora manejado dentro de run/battle
+    // El manejo de eventos se realiza directamente en run().
 }
 
 void Game::update()
 {
+    // BLOQUE 1: Actualizar animaciones siempre
+    player.updateAnimation();
+    enemy.updateAnimation();
+
+    if (animationPlaying && !player.isAnimating() && !enemy.isAnimating())
+    {
+        animationPlaying = false;
+    }
+
+    // BLOQUE 2: Turno del enemigo
+    if (currentTurn == TurnState::ENEMY_TURN && enemyAttackScheduled && !animationPlaying
+        && turnClock.getElapsedTime().asMilliseconds() >= 800)
+    {
+        int moveIndex = std::rand() % static_cast<int>(enemy.getMoves().size());
+        enemy.attack(player, moveIndex);
+        animationPlaying = true;
+        enemyAttackScheduled = false;
+        currentTurn = TurnState::PLAYER_TURN;
+        waitingForPlayer = true;
+    }
+
+    // BLOQUE 3: Verificar fin de batalla
+    if (player.isFainted() || enemy.isFainted())
+    {
+        currentTurn = TurnState::BATTLE_OVER;
+        isRunning = false;
+    }
+
+    // BLOQUE 4: Actualizar UI
+    battleUI.update();
 }
 
 void Game::render()
 {
+    window.clear(sf::Color(30, 30, 50));
+
+    window.draw(player);
+    window.draw(enemy);
+    battleUI.draw(window);
+
+    window.display();
 }
