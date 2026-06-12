@@ -8,13 +8,23 @@
 #include "Pokemonster.h"
 #include "BattleUI.h"
 
-enum class BattleState { WAITING_PLAYER, PLAYER_ATTACK, ENEMY_ATTACK };
+enum class BattleState 
+{
+    WAITING_FOR_PLAYER,    // Esperando que el jugador elija ataque
+    PLAYER_ANIMATING,      // El jugador está reproduciendo su animación de ataque
+    PLAYER_DELAY,          // Pausa después del ataque del jugador
+    ENEMY_ANIMATING,       // El enemigo está reproduciendo su animación de ataque
+    ENEMY_DELAY,           // Pausa después del ataque del enemigo
+    CHECK_FAINTED          // Verificar si alguien se debilitó
+};
 
 class Battle
 {
 public:
     Battle(sf::RenderWindow& win)
-        : window(win), ui(win.getSize()), player(nullptr), enemy(nullptr), state(BattleState::WAITING_PLAYER), rng(std::random_device{}())
+        : window(win), ui(win.getSize()), player(nullptr), enemy(nullptr), 
+          state(BattleState::WAITING_FOR_PLAYER), rng(std::random_device{}()),
+          delayDuration(sf::seconds(1.5f)), pendingPlayerMove(-1), pendingEnemyMove(-1)
     {
     }
 
@@ -33,6 +43,14 @@ private:
     bool finished = false;
 
     std::mt19937 rng;
+
+    // Temporizador y control de delays
+    sf::Clock battleClock;
+    sf::Time delayDuration;
+
+    // Variables para almacenar el movimiento pendiente
+    int pendingPlayerMove;
+    int pendingEnemyMove;
 };
 
 // Implementación mínima de la batalla
@@ -76,41 +94,25 @@ void Battle::handleEvent(const sf::Event& event)
     if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
     {
         sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
-        if (state == BattleState::WAITING_PLAYER)
+        
+        // Solo permitir seleccionar ataque si estamos esperando al jugador
+        if (state == BattleState::WAITING_FOR_PLAYER)
         {
             int choice = ui.handleMouseClick(mousePos);
             if (choice >= 0 && choice < 4)
             {
-                // almacenar elección en una variable local y cambiar de estado
-                state = BattleState::PLAYER_ATTACK;
-
-                // calcular daño
-                const Move& mv = player->getMoves()[choice];
-                int damage = std::max(1, mv.power + player->getAttack() - enemy->getDefense());
-
-                // Animación de ataque del jugador: fila 1, cuatro cuadros.
+                // PASO 1: Guardar el movimiento pendiente
+                pendingPlayerMove = choice;
+                
+                // PASO 2: Cambiar estado a PLAYER_ANIMATING
+                state = BattleState::PLAYER_ANIMATING;
+                
+                // PASO 3: Iniciar la animación (SIN calcular daño aún)
                 player->playAnimation(1, 4);
-
-                // reproducir sonido si existe (comentado - no hay Audio en SFML 2.6)
-                // sf::SoundBuffer buffer;
-                // if (buffer.loadFromFile(mv.soundPath))
-                // {
-                //     sf::Sound sound(buffer);
-                //     sound.play();
-                // }
-
-                enemy->takeDamage(damage);
-                ui.update();
-
-                if (enemy->isFainted())
-                {
-                    std::cout << "Enemy fainted! You win.\n";
-                    finished = true;
-                }
-                else
-                {
-                    state = BattleState::ENEMY_ATTACK;
-                }
+                battleClock.restart();
+                
+                const Move& mv = player->getMoves()[choice];
+                std::cout << "Player uses " << mv.name << "!\n";
             }
         }
     }
@@ -118,40 +120,125 @@ void Battle::handleEvent(const sf::Event& event)
 
 void Battle::update()
 {
-    // Actualizar animaciones en cada frame
+    // SIEMPRE actualizar las animaciones en cada frame (no se congelan durante delays)
     if (player) player->updateAnimation();
     if (enemy) enemy->updateAnimation();
 
-    if (state == BattleState::ENEMY_ATTACK && !finished)
+    // Máquina de estados para el flujo del combate - SECUENCIA ESTRICTA
+    switch (state)
     {
-        std::uniform_int_distribution<int> dist(0, 3);
-        int choice = dist(rng);
-        const Move& mv = enemy->getMoves()[choice];
-        int damage = std::max(1, mv.power + enemy->getAttack() - player->getDefense());
+        case BattleState::WAITING_FOR_PLAYER:
+            // No hace nada, espera a que el jugador haga clic
+            break;
 
-        // Animación de ataque del enemigo: fila 1, cuatro cuadros.
-        enemy->playAnimation(1, 4);
+        // ========== TURNO DEL JUGADOR ==========
+        case BattleState::PLAYER_ANIMATING:
+            // Esperamos a que la animación del jugador termine
+            if (!player->isAnimating())
+            {
+                // ← AQUÍ aplicamos el daño del jugador (JUSTO después de la animación)
+                if (pendingPlayerMove >= 0 && pendingPlayerMove < 4)
+                {
+                    const Move& mv = player->getMoves()[pendingPlayerMove];
+                    int damage = std::max(1, mv.power + player->getAttack() - enemy->getDefense());
+                    
+                    // Aplicar daño al enemigo
+                    enemy->takeDamage(damage);
+                    ui.update();
+                    std::cout << "[DAMAGE] " << damage << " dealt to Enemy! Enemy HP: " 
+                              << enemy->getHP() << "/" << enemy->getHPMax() << "\n";
+                }
 
-        // reproducir sonido si existe (comentado - no hay Audio en SFML 2.6)
-        // sf::SoundBuffer buffer;
-        // if (buffer.loadFromFile(mv.soundPath))
-        // {
-        //     sf::Sound sound(buffer);
-        //     sound.play();
-        // }
+                // Verificar si el enemigo se debilitó
+                if (enemy->isFainted())
+                {
+                    std::cout << "\n🎉 Enemy fainted! You win!\n";
+                    finished = true;
+                    state = BattleState::WAITING_FOR_PLAYER;
+                }
+                else
+                {
+                    // Transicionar a ENEMY_DELAY (esperar antes del ataque del enemigo)
+                    state = BattleState::ENEMY_DELAY;
+                    battleClock.restart();
+                    std::cout << "[WAIT] Enemy will attack after 1 second...\n";
+                }
+                
+                pendingPlayerMove = -1;  // Limpiar
+            }
+            break;
 
-        player->takeDamage(damage);
-        ui.update();
+        case BattleState::ENEMY_DELAY:
+            // Esperar 1 segundo antes de que el enemigo ataque
+            if (battleClock.getElapsedTime().asSeconds() >= 1.0f)
+            {
+                // Seleccionar movimiento del enemigo
+                std::uniform_int_distribution<int> dist(0, 3);
+                pendingEnemyMove = dist(rng);
+                
+                const Move& mv = enemy->getMoves()[pendingEnemyMove];
+                std::cout << "\nEnemy uses " << mv.name << "!\n";
+                
+                // Iniciar animación del enemigo
+                enemy->playAnimation(1, 4);
+                battleClock.restart();
+                
+                // Transicionar a ENEMY_ANIMATING
+                state = BattleState::ENEMY_ANIMATING;
+            }
+            break;
 
-        if (player->isFainted())
-        {
-            std::cout << "Player fainted! You lose.\n";
-            finished = true;
-        }
-        else
-        {
-            state = BattleState::WAITING_PLAYER;
-        }
+        // ========== TURNO DEL ENEMIGO ==========
+        case BattleState::ENEMY_ANIMATING:
+            // Esperamos a que la animación del enemigo termine
+            if (!enemy->isAnimating())
+            {
+                // ← AQUÍ aplicamos el daño del enemigo (JUSTO después de la animación)
+                if (pendingEnemyMove >= 0 && pendingEnemyMove < 4)
+                {
+                    const Move& mv = enemy->getMoves()[pendingEnemyMove];
+                    int damage = std::max(1, mv.power + enemy->getAttack() - player->getDefense());
+                    
+                    // Aplicar daño al jugador
+                    player->takeDamage(damage);
+                    ui.update();
+                    std::cout << "[DAMAGE] " << damage << " dealt to Player! Player HP: " 
+                              << player->getHP() << "/" << player->getHPMax() << "\n";
+                }
+
+                // Verificar si el jugador se debilitó
+                if (player->isFainted())
+                {
+                    std::cout << "\n💔 Player fainted! You lose!\n";
+                    finished = true;
+                    state = BattleState::WAITING_FOR_PLAYER;
+                }
+                else
+                {
+                    // Transicionar a PLAYER_DELAY (esperar antes del próximo turno del jugador)
+                    state = BattleState::PLAYER_DELAY;
+                    battleClock.restart();
+                    std::cout << "[WAIT] Preparing for next turn...\n";
+                }
+                
+                pendingEnemyMove = -1;  // Limpiar
+            }
+            break;
+
+        case BattleState::PLAYER_DELAY:
+            // Esperar 1 segundo antes de volver a esperar al jugador
+            if (battleClock.getElapsedTime().asSeconds() >= 1.0f)
+            {
+                // Volver al estado inicial del turno
+                state = BattleState::WAITING_FOR_PLAYER;
+                std::cout << "\n=== NEW TURN: Waiting for Player Action ===\n";
+            }
+            break;
+
+        case BattleState::CHECK_FAINTED:
+            // Estado reservado para verificaciones adicionales
+            state = BattleState::WAITING_FOR_PLAYER;
+            break;
     }
 }
 

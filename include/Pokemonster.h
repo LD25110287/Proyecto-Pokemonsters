@@ -21,6 +21,7 @@ public:
 
     void takeDamage(int damage);
     bool isFainted() const;
+    bool isAnimating() const { return isAttacking; }
 
     const std::vector<Move>& getMoves() const;
     const std::string& getName() const;
