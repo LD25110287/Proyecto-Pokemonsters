@@ -118,3 +118,15 @@ int BattleUI::handleMouseClick(sf::Vector2i mousePos)
     }
     return -1;
 }
+
+void BattleUI::updateMoveButtons(Pokemonster* pokemon)
+{
+    if (!pokemon)
+        return;
+
+    const auto& moves = pokemon->getMoves();
+    for (size_t i = 0; i < moveTexts.size() && i < moves.size(); ++i)
+    {
+        moveTexts[i].setString(moves[i].name);
+    }
+}

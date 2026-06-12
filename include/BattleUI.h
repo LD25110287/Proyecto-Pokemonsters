@@ -21,6 +21,9 @@ public:
     // Retorna índice del ataque (0-3) o -1 si no hubo selección
     int handleMouseClick(sf::Vector2i mousePos);
 
+    // Para multijugador: actualiza los textos de botones con los movimientos de un Pokémon específico
+    void updateMoveButtons(Pokemonster* pokemon);
+
 private:
     sf::Vector2u winSize;
 
