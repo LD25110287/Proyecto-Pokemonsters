@@ -1,45 +1,47 @@
-﻿#ifndef GAME_H
+#ifndef GAME_H
 #define GAME_H
 
 #include <SFML/Graphics.hpp>
 #include "Pokemonster.h"
 #include "BattleUI.h"
+#include "Move.h"
 #include <cstdlib>
 #include <ctime>
+
+// Datos del personaje seleccionado pasados desde CharacterSelect
+struct CharacterData;
 
 class Game
 {
 public:
-    Game();
+    // Constructor que recibe los índices de personaje elegidos
+    Game(int p1Index, int p2Index);
     ~Game();
     void run();
-    
+
 private:
     void handleEvents();
     void update();
     void render();
+
+    // Inicializa un Pokemonster según el índice (0-5)
+    Pokemonster buildCharacter(int index, bool isPlayer);
 
     enum class TurnState { PLAYER_TURN, ENEMY_TURN, BATTLE_OVER };
 
     sf::RenderWindow window;
     bool isRunning;
 
-    // Estado del turno
     TurnState currentTurn;
-
-    // Flags de control
     bool waitingForPlayer;
     bool animationPlaying;
 
-    // Temporizador para pausa entre turnos
     sf::Clock turnClock;
     bool enemyAttackScheduled;
 
-    // Personajes
     Pokemonster player;
     Pokemonster enemy;
 
-    // UI de batalla
     BattleUI battleUI;
 };
 
