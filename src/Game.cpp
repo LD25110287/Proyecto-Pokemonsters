@@ -16,24 +16,31 @@ Game::Game()
     window.setFramerateLimit(60);
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    // Cada Move: nombre, poder, tipo, sonido, animationRow, frameCount
-    // animationRow distinto por habilidad = BUG 2 FIX
-    player = Pokemonster("Pikachu", 100, 20, 5, {
-        Move("Impactrueno", 40, MoveType::Electric, "", 1, 4),
-        Move("Rayo",        55, MoveType::Electric, "", 2, 3),
-        Move("Voltio Cruel",70, MoveType::Electric, "", 3, 5),
-        Move("Gruñido",      0, MoveType::Normal,   "", 0, 2)
+    // ── JUGADOR: Exdarktyranomon (1.png) ─────────────────────────────────
+    // Spritesheet: 9 cols x 4 filas, frame 50x50
+    // Fila 0: Frenesí Viral  | Fila 1: Cola de Hierro
+    // Fila 2: Explosión Fuego | Fila 3: Mar de Llamas
+    player = Pokemonster("Exdarktyranomon", 100, 22, 8, {
+        Move("Frenesi Viral",    45, MoveType::Normal, "", 0, 9),
+        Move("Cola de Hierro",   55, MoveType::Normal, "", 1, 9),
+        Move("Explosion Fuego",  70, MoveType::Fire,   "", 2, 9),
+        Move("Mar de Llamas",    85, MoveType::Fire,   "", 3, 9)
     });
-
-    enemy = Pokemonster("Charmander", 90, 18, 4, {
-        Move("Ascuas",    40, MoveType::Fire,   "", 1, 4),
-        Move("Llamarada", 60, MoveType::Fire,   "", 2, 4),
-        Move("Arañazo",   35, MoveType::Normal, "", 3, 3),
-        Move("Rugido",     0, MoveType::Normal, "", 0, 2)
-    });
-
+    player.loadSpriteSheet("assets/images/1.png", 50, 50);
     player.setPosition(150.f, 300.f);
-    enemy.setPosition(500.f, 150.f);
+
+    // ── ENEMIGO: BeelStarmon (2.png) ─────────────────────────────────────
+    // Spritesheet: 9 cols x 4 filas, frame 100x100
+    // Fila 0: Gatillo Rápido | Fila 1: Garra Doble
+    // Fila 2: Huracán Plomo  | Fila 3: Bala Mosca
+    enemy = Pokemonster("BeelStarmon", 95, 20, 6, {
+        Move("Gatillo Rapido",   40, MoveType::Normal, "", 0, 9),
+        Move("Garra Doble",      55, MoveType::Normal, "", 1, 9),
+        Move("Huracan de Plomo", 65, MoveType::Normal, "", 2, 9),
+        Move("Bala Mosca",       80, MoveType::Normal, "", 3, 9)
+    });
+    enemy.loadSpriteSheet("assets/images/2.png", 100, 100);
+    enemy.setPosition(450.f, 100.f);
 
     battleUI.setPlayerPokemon(&player);
     battleUI.setEnemyPokemon(&enemy);
@@ -50,7 +57,6 @@ void Game::run()
 {
     while (window.isOpen() && isRunning && currentTurn != TurnState::BATTLE_OVER)
     {
-        // ── API SFML 2 ────────────────────────────────────────────────────
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -70,8 +76,6 @@ void Game::run()
             if (event.type == sf::Event::MouseButtonPressed &&
                 event.mouseButton.button == sf::Mouse::Left)
             {
-                // BUG 1 FIX: solo actúa si es turno del jugador,
-                // está esperando input y ninguna animación está activa.
                 if (currentTurn     == TurnState::PLAYER_TURN &&
                     waitingForPlayer                           &&
                     !animationPlaying)
@@ -90,27 +94,22 @@ void Game::run()
                 }
             }
         }
-        // ─────────────────────────────────────────────────────────────────
 
         update();
         render();
     }
 }
 
-void Game::handleEvents() { /* manejo en run() */ }
+void Game::handleEvents() {}
 
 void Game::update()
 {
-    // 1. Actualizar animaciones
     player.updateAnimation();
     enemy.updateAnimation();
 
-    // 2. Detectar fin de animación
     if (animationPlaying && !player.isAnimating() && !enemy.isAnimating())
         animationPlaying = false;
 
-    // 3. Turno del enemigo — espera a que animación del jugador termine
-    // BUG 1 FIX: el enemigo solo ataca cuando !animationPlaying
     if (currentTurn          == TurnState::ENEMY_TURN &&
         enemyAttackScheduled                           &&
         !animationPlaying                              &&
@@ -124,14 +123,12 @@ void Game::update()
         waitingForPlayer     = true;
     }
 
-    // 4. Verificar fin de batalla
     if (player.isFainted() || enemy.isFainted())
     {
         currentTurn = TurnState::BATTLE_OVER;
         isRunning   = false;
     }
 
-    // 5. Actualizar UI
     battleUI.update();
 }
 
