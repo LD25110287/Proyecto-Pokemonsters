@@ -3,7 +3,6 @@
 #include <iostream>
 
 // ── Tabla de los 6 personajes ─────────────────────────────────────────────────
-// Moves: nombre, poder, tipo, "", fila, frames, COSTO_ENERGIA
 struct CharInfo
 {
     const char* name;
@@ -72,6 +71,36 @@ static const CharInfo CHAR_TABLE[6] = {
     }
 };
 
+// ── Escala visual por personaje ───────────────────────────────────────────────
+// Sleipmon y Bioquetzalmon como referencia visual correcta.
+// Los demás ajustados para verse proporcionales sin tapar las barras de HP.
+struct ScaleInfo { float scalePlayer; float scaleEnemy; };
+
+static const ScaleInfo SCALE_TABLE[6] = {
+    {3.5f, 2.5f},   // 0: Exdarktyranomon (50x50 → x3.5 = 175px, proporcional)
+    {2.0f, 1.5f},   // 1: BeelStarmon     (100x100 → reducido)
+    {2.0f, 1.5f},   // 2: Bioquetzalmon   (100x100 → referencia correcta)
+    {1.5f, 1.5f},   // 3: Jesmon          (100x100)
+    {2.5f, 1.8f},   // 4: Sleipmon        (150x80  → referencia correcta)
+    {2.0f, 1.5f},   // 5: Magnamon        (100x100)
+};
+
+// ── Posiciones estilo Pokémon clásico ─────────────────────────────────────────
+// Jugador: abajo-izquierda. Enemigo: arriba-derecha.
+// Las posiciones Y se ajustan para que las barras de HP (que están más arriba)
+// no tapen el sprite. Barra jugador en y≈370, sprite jugador empieza en y≈380.
+struct PosInfo { float px, py, ex, ey; };
+
+static const PosInfo POS_TABLE[6] = {
+    //  jugador(x,  y)    enemigo(x,   y)
+    {  50.f, 370.f,   470.f,  120.f },  // 0: Exdarktyranomon
+    {  50.f, 360.f,   470.f,  110.f },  // 1: BeelStarmon
+    {  50.f, 360.f,   470.f,  110.f },  // 2: Bioquetzalmon
+    {  50.f, 360.f,   470.f,  110.f },  // 3: Jesmon
+    {  30.f, 370.f,   440.f,  130.f },  // 4: Sleipmon (más ancho)
+    {  50.f, 360.f,   470.f,  110.f },  // 5: Magnamon
+};
+
 // ── buildCharacter ────────────────────────────────────────────────────────────
 Pokemonster Game::buildCharacter(int index, bool isPlayer)
 {
@@ -85,7 +114,23 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 
     Pokemonster p(c.name, c.hp, c.atk, c.def, moves);
     p.loadSpriteSheet(c.spritePath, c.frameW, c.frameH);
-    p.setPosition(isPlayer ? 150.f : 450.f, isPlayer ? 320.f : 80.f);
+
+    const ScaleInfo& s   = SCALE_TABLE[index];
+    const PosInfo&   pos = POS_TABLE[index];
+
+    if (isPlayer)
+    {
+        // Jugador: primer plano, abajo-izquierda, escala mayor
+        p.setScale(s.scalePlayer, s.scalePlayer);
+        p.setPosition(pos.px, pos.py);
+    }
+    else
+    {
+        // Enemigo: al fondo, arriba-derecha, escala menor
+        p.setScale(s.scaleEnemy, s.scaleEnemy);
+        p.setPosition(pos.ex, pos.ey);
+    }
+
     return p;
 }
 
@@ -163,18 +208,14 @@ void Game::update()
     if (animationPlaying && !player.isAnimating() && !enemy.isAnimating())
         animationPlaying = false;
 
-    // Turno del enemigo
+    // Turno del enemigo: espera 800ms después del ataque del jugador
     if (currentTurn          == TurnState::ENEMY_TURN &&
         enemyAttackScheduled && !animationPlaying      &&
         turnClock.getElapsedTime().asMilliseconds() >= 800)
     {
-        // ── Regenerar +1 energía a ambos al inicio del turno enemigo ─────
-        // (el jugador ya atacó, ahora le toca al enemigo → es un turno completo)
         player.addEnergy(1);
         enemy.addEnergy(1);
-        // ─────────────────────────────────────────────────────────────────
 
-        // Enemigo elige un movimiento que pueda costear
         std::vector<int> usable;
         for (int i = 0; i < (int)enemy.getMoves().size(); ++i)
             if (enemy.canUseMove(i)) usable.push_back(i);
@@ -201,8 +242,11 @@ void Game::update()
 void Game::render()
 {
     window.clear(sf::Color(30, 30, 50));
-    window.draw(player);
+
+    // Enemigo primero (al fondo), jugador encima (primer plano)
     window.draw(enemy);
+    window.draw(player);
+
     battleUI.draw(window);
     window.display();
 }

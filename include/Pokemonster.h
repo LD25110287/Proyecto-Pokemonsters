@@ -20,6 +20,9 @@ public:
     void attack(Pokemonster& target, int selectedMoveIndex);
     void setPosition(float x, float y);
 
+    // Escala visual del sprite (para efecto estilo Pokémon clásico)
+    void setScale(float x, float y);
+
     void takeDamage(int damage);
     bool isFainted()   const;
     bool isAnimating() const { return isAttacking; }
@@ -28,8 +31,8 @@ public:
     static const int MAX_ENERGY = 10;
     int  getEnergy()    const { return energy; }
     int  getMaxEnergy() const { return MAX_ENERGY; }
-    void addEnergy(int amount);          // gana energía (cap a MAX_ENERGY)
-    bool canUseMove(int moveIndex) const; // true si tiene suficiente energía
+    void addEnergy(int amount);
+    bool canUseMove(int moveIndex) const;
     // ──────────────────────────────────────────────────────────────────────
 
     const std::vector<Move>& getMoves()  const;

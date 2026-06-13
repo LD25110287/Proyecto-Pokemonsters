@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <iostream>
 
-// Definición de la constante estática (necesaria en C++11/14)
 const int Pokemonster::MAX_ENERGY;
 
 Pokemonster::Pokemonster()
@@ -10,7 +9,7 @@ Pokemonster::Pokemonster()
       frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
       pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
-      energy(3)   // empieza con 3 de 10
+      energy(3)
 {}
 
 Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
@@ -20,7 +19,7 @@ Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
       frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
       pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
-      energy(3)   // empieza con 3 de 10
+      energy(3)
 {}
 
 // ── Sprite ────────────────────────────────────────────────────────────────────
@@ -39,6 +38,12 @@ void Pokemonster::setFrame(int row, int col)
 {
     sprite.setTextureRect(sf::IntRect(col * frameWidth, row * frameHeight,
                                      frameWidth, frameHeight));
+}
+
+// Aplica escala visual al sprite (no afecta lógica ni hitbox)
+void Pokemonster::setScale(float x, float y)
+{
+    sprite.setScale(x, y);
 }
 
 void Pokemonster::playAnimation(int row, int framesAmount)
@@ -93,18 +98,15 @@ bool Pokemonster::canUseMove(int moveIndex) const
 void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 {
     if (selectedMoveIndex < 0 || selectedMoveIndex >= (int)moves.size()) return;
-    if (!canUseMove(selectedMoveIndex)) return;  // seguridad extra
+    if (!canUseMove(selectedMoveIndex)) return;
 
     const Move& m = moves[selectedMoveIndex];
 
-    // Descontar energía
     energy -= m.energyCost;
     if (energy < 0) energy = 0;
 
-    // Animación correcta según habilidad (Bug 2 fix)
     playAnimation(m.animationRow, m.frameCount);
 
-    // Daño diferido (Bug 1 fix)
     int damage    = std::max(1, m.power + attackStat - target.getDefense());
     pendingDamage = damage;
     damageTarget  = &target;

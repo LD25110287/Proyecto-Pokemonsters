@@ -19,16 +19,20 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
             if (font.loadFromFile(p)) break;
     }
 
-    // ── Barra HP jugador (abajo-izquierda) ───────────────────────────────
+    // ── Barra HP jugador ──────────────────────────────────────────────────
+    // Colocada en la parte inferior-izquierda, DEBAJO de la barra de energía
+    // y por encima del sprite (sprite empieza en y≈370, barra en y≈340)
     playerHpBack.setSize({220.f, 16.f});
     playerHpBack.setFillColor(sf::Color(80, 80, 80));
-    playerHpBack.setPosition(20.f, winSize.y - 130.f);
+    playerHpBack.setPosition(20.f, 340.f);
 
     playerHpFront.setSize({220.f, 16.f});
     playerHpFront.setFillColor(sf::Color::Green);
     playerHpFront.setPosition(playerHpBack.getPosition());
 
-    // ── Barra HP enemigo (arriba-derecha) ────────────────────────────────
+    // ── Barra HP enemigo ──────────────────────────────────────────────────
+    // Colocada arriba-derecha, el sprite del enemigo empieza en y≈110
+    // así que la barra va en y=20, bien separada del sprite
     enemyHpBack.setSize({220.f, 16.f});
     enemyHpBack.setFillColor(sf::Color(80, 80, 80));
     enemyHpBack.setPosition(winSize.x - 240.f, 20.f);
@@ -37,9 +41,11 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
     enemyHpFront.setFillColor(sf::Color::Green);
     enemyHpFront.setPosition(enemyHpBack.getPosition());
 
-    // ── Barras de energía (10 celdas) ────────────────────────────────────
-    buildEnergyBar(playerEnergyCells, 20.f,              winSize.y - 108.f,
+    // ── Barras de energía ─────────────────────────────────────────────────
+    // Jugador: justo debajo de su barra de HP (HP en y=340, energía en y=362)
+    buildEnergyBar(playerEnergyCells, 20.f,              362.f,
                    sf::Color(0, 200, 255));
+    // Enemigo: justo debajo de su barra de HP (HP en y=20, energía en y=42)
     buildEnergyBar(enemyEnergyCells,  winSize.x - 240.f, 42.f,
                    sf::Color(255, 180, 0));
 
@@ -65,7 +71,6 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
         moveTexts[i].setFillColor(sf::Color::White);
         moveTexts[i].setPosition(x + 6.f, y + 5.f);
 
-        // Costo (esquina superior-derecha del botón)
         moveCostTexts[i].setFont(font);
         moveCostTexts[i].setCharacterSize(12);
         moveCostTexts[i].setFillColor(sf::Color(0, 220, 255));
@@ -113,7 +118,7 @@ void BattleUI::update()
             playerEnergyCells[i].setFillColor(i < e
                 ? activeColor : sf::Color(40, 40, 40));
 
-        // Botones: activo/desactivado según energía disponible
+        // Botones: activo/desactivado según energía
         const auto& moves = player->getMoves();
         for (size_t i = 0; i < moveButtons.size() && i < moves.size(); ++i)
         {
@@ -124,7 +129,6 @@ void BattleUI::update()
             moveTexts[i].setFillColor(canUse
                 ? sf::Color::White : sf::Color(100, 100, 100));
 
-            // Mostrar nombre y costo
             moveTexts[i].setString(moves[i].name);
             moveCostTexts[i].setString(std::to_string(moves[i].energyCost) + "E");
             moveCostTexts[i].setFillColor(canUse
@@ -154,17 +158,14 @@ void BattleUI::update()
 // ── Draw ──────────────────────────────────────────────────────────────────────
 void BattleUI::draw(sf::RenderTarget& target)
 {
-    // HP barras
     target.draw(playerHpBack);
     target.draw(playerHpFront);
     target.draw(enemyHpBack);
     target.draw(enemyHpFront);
 
-    // Energía
     for (auto& c : playerEnergyCells) target.draw(c);
     for (auto& c : enemyEnergyCells)  target.draw(c);
 
-    // Botones de movimiento
     for (size_t i = 0; i < moveButtons.size(); ++i)
     {
         target.draw(moveButtons[i]);
@@ -185,7 +186,6 @@ int BattleUI::handleMouseClick(sf::Vector2i mousePos)
     {
         if (moveButtons[i].getGlobalBounds().contains(m))
         {
-            // Si el botón está desactivado (no hay energía), ignorar click
             if (player && !player->canUseMove(static_cast<int>(i)))
                 return -1;
             return static_cast<int>(i);
