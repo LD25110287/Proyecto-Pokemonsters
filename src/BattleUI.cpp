@@ -24,26 +24,35 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
     }
 
     // ── Barra HP Jugador 1 (abajo-izquierda) ─────────────────────────────────
-    playerHpBack.setSize({220.f, 16.f});
-    playerHpBack.setFillColor(sf::Color(80, 80, 80));
+    // Fondo semi-transparente con marco
+    playerHpBack.setSize({220.f, 20.f});
+    playerHpBack.setFillColor(sf::Color(30, 30, 30, 200));
+    playerHpBack.setOutlineThickness(2.f);
+    playerHpBack.setOutlineColor(sf::Color(100, 100, 100));
     playerHpBack.setPosition(20.f, 340.f);
 
-    playerHpFront.setSize({220.f, 16.f});
-    playerHpFront.setFillColor(sf::Color::Green);
-    playerHpFront.setPosition(playerHpBack.getPosition());
+    // Barra de color (Más chica e incrustada +2px)
+    playerHpFront.setSize({216.f, 16.f});
+    playerHpFront.setFillColor(sf::Color(50, 200, 50));
+    playerHpFront.setPosition(22.f, 342.f);
 
     // ── Barra HP Jugador 2 (arriba-derecha) ───────────────────────────────────
-    enemyHpBack.setSize({220.f, 16.f});
-    enemyHpBack.setFillColor(sf::Color(80, 80, 80));
+    // Fondo semi-transparente con marco
+    enemyHpBack.setSize({220.f, 20.f});
+    enemyHpBack.setFillColor(sf::Color(30, 30, 30, 200));
+    enemyHpBack.setOutlineThickness(2.f);
+    enemyHpBack.setOutlineColor(sf::Color(100, 100, 100));
     enemyHpBack.setPosition(winSize.x - 240.f, 20.f);
 
-    enemyHpFront.setSize({220.f, 16.f});
-    enemyHpFront.setFillColor(sf::Color::Green);
-    enemyHpFront.setPosition(enemyHpBack.getPosition());
+    // Barra de color (Más chica e incrustada +2px)
+    enemyHpFront.setSize({216.f, 16.f});
+    enemyHpFront.setFillColor(sf::Color(50, 200, 50));
+    enemyHpFront.setPosition(winSize.x - 238.f, 22.f);
 
     // ── Barras de energía ─────────────────────────────────────────────────────
-    buildEnergyBar(playerEnergyCells, 20.f,              362.f, sf::Color(0, 200, 255));
-    buildEnergyBar(enemyEnergyCells,  winSize.x - 240.f, 42.f,  sf::Color(255, 180, 0));
+    // Ajustadas un poco en Y para no encimarse con el nuevo marco
+    buildEnergyBar(playerEnergyCells, 20.f,              368.f, sf::Color(0, 200, 255));
+    buildEnergyBar(enemyEnergyCells,  winSize.x - 240.f, 48.f,  sf::Color(255, 180, 0));
 
     // ── Panel de botones (abajo-derecha, igual posición que antes) ────────────
     const float btnW = 220.f, btnH = 40.f;
@@ -74,7 +83,6 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
     }
 
     // ── Etiqueta de turno (encima del panel) ──────────────────────────────────
-    // Se coloca justo por encima del primer botón
     float labelX = winSize.x - btnW - 20.f;
     float labelY = winSize.y - 4 * (btnH + 8.f) - 44.f;
     turnLabel.setFont(font);
@@ -171,10 +179,13 @@ void BattleUI::update()
     {
         float ratio = (player->getHPMax() > 0)
             ? static_cast<float>(player->getHP()) / player->getHPMax() : 0.f;
-        playerHpFront.setSize({220.f * ratio, 16.f});
-        if      (ratio > 0.6f) playerHpFront.setFillColor(sf::Color::Green);
-        else if (ratio > 0.3f) playerHpFront.setFillColor(sf::Color::Yellow);
-        else                    playerHpFront.setFillColor(sf::Color::Red);
+        
+        // Ajustamos al nuevo tamaño interior (216px)
+        playerHpFront.setSize({216.f * ratio, 16.f});
+        
+        if      (ratio > 0.5f) playerHpFront.setFillColor(sf::Color(50, 200, 50));  // Verde brillante
+        else if (ratio > 0.2f) playerHpFront.setFillColor(sf::Color(220, 200, 50)); // Amarillo
+        else                   playerHpFront.setFillColor(sf::Color(220, 50, 50));  // Rojo
 
         // Energía J1
         int e = player->getEnergy();
@@ -188,10 +199,13 @@ void BattleUI::update()
     {
         float ratio = (enemy->getHPMax() > 0)
             ? static_cast<float>(enemy->getHP()) / enemy->getHPMax() : 0.f;
-        enemyHpFront.setSize({220.f * ratio, 16.f});
-        if      (ratio > 0.6f) enemyHpFront.setFillColor(sf::Color::Green);
-        else if (ratio > 0.3f) enemyHpFront.setFillColor(sf::Color::Yellow);
-        else                    enemyHpFront.setFillColor(sf::Color::Red);
+            
+        // Ajustamos al nuevo tamaño interior (216px)
+        enemyHpFront.setSize({216.f * ratio, 16.f});
+        
+        if      (ratio > 0.5f) enemyHpFront.setFillColor(sf::Color(50, 200, 50));  // Verde brillante
+        else if (ratio > 0.2f) enemyHpFront.setFillColor(sf::Color(220, 200, 50)); // Amarillo
+        else                   enemyHpFront.setFillColor(sf::Color(220, 50, 50));  // Rojo
 
         // Energía J2
         int e = enemy->getEnergy();
@@ -201,7 +215,6 @@ void BattleUI::update()
     }
 
     // ── Actualizar colores de botones si cambia la energía disponible ─────────
-    // (un ataque puede cambiar canUseMove del siguiente turno)
     refreshButtons();
 }
 
