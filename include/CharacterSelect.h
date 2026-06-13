@@ -38,11 +38,13 @@ public:
 private:
     // ── Fases ─────────────────────────────────────────────────────────────────
     // PICKING:      alternando J1→J2→J1→J2→J1→J2 (6 picks en total)
-    // ORDER_P1:     J1 elige el orden de su equipo
-    // ORDER_P2:     J2 elige el orden de su equipo
+    // ORDER:        draft de orden — patrón J1,J2,J2,J1,J1,J2 (6 sub-turnos)
+    //               orderTurn 0→J1 elige Ronda1, 1→J2 elige Ronda1,
+    //               2→J2 elige Ronda2, 3→J1 elige Ronda2,
+    //               4→J1 elige Ronda3, 5→J2 elige Ronda3
     // CONFIRM:      pantalla final con fondo VS y equipos ordenados
     // STAGE_SELECT: ruleta de escenario
-    enum class Phase { PICKING, ORDER_P1, ORDER_P2, CONFIRM, STAGE_SELECT };
+    enum class Phase { PICKING, ORDER, CONFIRM, STAGE_SELECT };
 
     void loadAssets();
     void handleEvents();
@@ -51,7 +53,7 @@ private:
 
     // Dibujo por fase
     void drawPickingScreen();
-    void drawOrderScreen(bool isP1);
+    void drawOrderScreen(bool isP1, int targetRound); // targetRound = ronda que se está asignando
     void drawConfirmScreen();
     void drawStageSelect();
 
@@ -77,11 +79,11 @@ private:
     // ── Grid de selección ─────────────────────────────────────────────────────
     static const int COLS    = 3;
     static const int ROWS    = 2;
-    static const int CARD_W  = 200;
-    static const int CARD_H  = 200;
-    static const int GRID_X  = 100;
-    static const int GRID_Y  = 150;
-    static const int PADDING = 20;
+    static const int CARD_W  = 230;   // ajustado para 800px de ancho
+    static const int CARD_H  = 217;   // ajustado para 600px de alto
+    static const int GRID_X  = 40;    // margen izquierdo
+    static const int GRID_Y  = 140;   // margen superior (espacio para títulos)
+    static const int PADDING = 15;
 
     int hoveredCard;   // carta bajo el cursor (-1 = ninguna)
 
@@ -97,8 +99,9 @@ private:
     // orderSelected[i] = índice dentro de p1Picks/p2Picks ya colocado
     std::array<int,3> p1Team;   // equipo J1 en orden de batalla
     std::array<int,3> p2Team;   // equipo J2 en orden de batalla
-    std::vector<int>  orderSelected;  // cuáles ya se colocaron al ordenar
-    int               orderSlot;      // slot actual a llenar (0,1,2)
+    std::vector<int>  orderSelected;  // picks ya colocados por el jugador activo
+    int               orderSlot;      // slot actual a llenar (0,1,2) — compartido
+    int               orderTurn;      // 0..5: sub-turno del draft de orden
 
     // ── Fondo VS y escenario ──────────────────────────────────────────────────
     sf::Texture vsBgTexture;
