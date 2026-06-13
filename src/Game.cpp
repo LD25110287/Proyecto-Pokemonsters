@@ -17,57 +17,57 @@ struct CharInfo
 
 static const CharInfo CHAR_TABLE[6] = {
     {   // 0: Exdarktyranomon
-        "Exdarktyranomon", "assets/images/1.png", 50, 50, 100, 22, 8,
+        "Exdarktyranomon", "assets/images/1.png", 50, 50, 500, 22, 8,
         {
-            {"Frenesi Viral",    45, MoveType::Normal, 0, 9, 1},
-            {"Cola de Hierro",   55, MoveType::Normal, 1, 9, 2},
-            {"Explosion Fuego",  70, MoveType::Fire,   2, 9, 3},
-            {"Mar de Llamas",    85, MoveType::Fire,   3, 9, 5}
+            {"Frenesi Viral",    14, MoveType::Normal, 0, 9, 1},
+            {"Cola de Hierro",   17, MoveType::Normal, 1, 9, 2},
+            {"Explosion Fuego",  21, MoveType::Fire,   2, 9, 3},
+            {"Mar de Llamas",    26, MoveType::Fire,   3, 9, 5}
         }
     },
     {   // 1: BeelStarmon
-        "BeelStarmon", "assets/images/2.png", 100, 100, 95, 20, 6,
+        "BeelStarmon", "assets/images/2.png", 100, 100, 475, 20, 6,
         {
-            {"Gatillo Rapido",    40, MoveType::Normal, 0, 9, 1},
-            {"Garra Doble",       55, MoveType::Normal, 1, 9, 2},
-            {"Huracan de Plomo",  65, MoveType::Normal, 2, 9, 3},
-            {"Bala Mosca",        80, MoveType::Normal, 3, 9, 5}
+            {"Gatillo Rapido",    12, MoveType::Normal, 0, 9, 1},
+            {"Garra Doble",       17, MoveType::Normal, 1, 9, 2},
+            {"Huracan de Plomo",  20, MoveType::Normal, 2, 9, 3},
+            {"Bala Mosca",        24, MoveType::Normal, 3, 9, 5}
         }
     },
     {   // 2: Bioquetzalmon
-        "Bioquetzalmon", "assets/images/3.png", 100, 100, 90, 18, 10,
+        "Bioquetzalmon", "assets/images/3.png", 100, 100, 450, 18, 10,
         {
-            {"Blindaje Biorganico",  35, MoveType::Normal,   0, 8, 1},
-            {"Onda Congelante",      55, MoveType::Water,    1, 8, 2},
-            {"Rayo Fosil",           65, MoveType::Electric, 2, 8, 3},
-            {"Vuelo Serpiente",      80, MoveType::Normal,   3, 8, 4}
+            {"Blindaje Biorganico",  11, MoveType::Normal,   0, 8, 1},
+            {"Onda Congelante",      17, MoveType::Water,    1, 8, 2},
+            {"Rayo Fosil",           20, MoveType::Electric, 2, 8, 3},
+            {"Vuelo Serpiente",      24, MoveType::Normal,   3, 8, 4}
         }
     },
     {   // 3: Jesmon
-        "Jesmon", "assets/images/4.png", 100, 100, 105, 25, 7,
+        "Jesmon", "assets/images/4.png", 100, 100, 525, 25, 7,
         {
-            {"OS Generics",          40, MoveType::Normal, 0, 9, 1},
-            {"Juicio de la Espada",  60, MoveType::Normal, 1, 9, 2},
-            {"Weltgeist",            75, MoveType::Normal, 2, 9, 4},
-            {"Uno Para Todos",       90, MoveType::Normal, 3, 9, 5}
+            {"OS Generics",          12, MoveType::Normal, 0, 9, 1},
+            {"Juicio de la Espada",  18, MoveType::Normal, 1, 9, 2},
+            {"Weltgeist",            23, MoveType::Normal, 2, 9, 4},
+            {"Uno Para Todos",       27, MoveType::Normal, 3, 9, 5}
         }
     },
     {   // 4: Sleipmon
-        "Sleipmon", "assets/images/5.png", 150, 80, 110, 19, 12,
+        "Sleipmon", "assets/images/5.png", 150, 80, 550, 19, 12,
         {
-            {"Armadura Roja",    35, MoveType::Normal,   0, 9, 1},
-            {"Aliento de Odin",  55, MoveType::Normal,   1, 9, 2},
-            {"Disparo Tactico",  65, MoveType::Normal,   2, 9, 3},
-            {"Bifrost",          85, MoveType::Electric, 3, 9, 5}
+            {"Armadura Roja",    11, MoveType::Normal,   0, 9, 1},
+            {"Aliento de Odin",  17, MoveType::Normal,   1, 9, 2},
+            {"Disparo Tactico",  20, MoveType::Normal,   2, 9, 3},
+            {"Bifrost",          26, MoveType::Electric, 3, 9, 5}
         }
     },
     {   // 5: Magnamon
-        "Magnamon", "assets/images/6.png", 100, 100, 98, 23, 9,
+        "Magnamon", "assets/images/6.png", 100, 100, 490, 23, 9,
         {
-            {"Escudo Milagros",       40, MoveType::Normal,   0, 14, 1},
-            {"Patada Magnum",         55, MoveType::Normal,   1, 14, 2},
-            {"Disparo de Plasma",     70, MoveType::Electric, 2, 14, 3},
-            {"Tormenta Solar Dorada", 88, MoveType::Normal,   3, 14, 5}
+            {"Escudo Milagros",       12, MoveType::Normal,   0, 14, 1},
+            {"Patada Magnum",         17, MoveType::Normal,   1, 14, 2},
+            {"Disparo de Plasma",     21, MoveType::Electric, 2, 14, 3},
+            {"Tormenta Solar Dorada", 26, MoveType::Normal,   3, 14, 5}
         }
     }
 };
