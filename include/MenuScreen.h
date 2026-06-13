@@ -1,15 +1,9 @@
 #ifndef MENUSCREEN_H
 #define MENUSCREEN_H
 
-// ── BUG 3 FIX ────────────────────────────────────────────────────────────────
-// Se eliminó el forward include de Game.h que estaba en el .cpp original.
-// MenuScreen NO debe conocer a Game; esa dependencia circular evitaba que
-// el linker pudiera resolver los símbolos del menú correctamente.
-// main.cpp es quien orquesta la secuencia Menu → Game, no el propio menú.
-// ─────────────────────────────────────────────────────────────────────────────
-
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <string>
 
 class MenuScreen
 {
@@ -23,19 +17,33 @@ private:
     {
         MAIN_MENU,
         CHARACTERS,
+        CHARACTER_DETAIL,  // ← pantalla de detalle de un personaje
         SETTINGS
     };
 
+    struct CharEntry
+    {
+        std::string name;
+        std::string description;
+        std::string portraitPath;
+        sf::Texture texture;
+        sf::Sprite  sprite;
+        bool        loaded = false;
+    };
+
     void loadAssets();
+    void loadCharacterPortraits();
     void createMenuButtons();
     void updateButtonHover(const sf::Vector2i& mousePos);
     int  getButtonAtPosition(const sf::Vector2i& mousePos) const;
     void handleMainMenuClick(int index);
+    void handleSubmenuEvents(const sf::Event& event);
+
     void drawMainMenu();
     void drawCharactersScreen();
+    void drawCharacterDetail(int index);
     void drawSettingsScreen();
     void drawBackButton();
-    void handleSubmenuEvents(const sf::Event& event);
 
     sf::RenderWindow window;
     sf::Font         font;
@@ -50,6 +58,14 @@ private:
     MenuState state;
     int       hoveredButton;
     bool      launchGame;
+
+    // Personajes para la pantalla de detalle
+    std::vector<CharEntry> chars;
+    int detailIndex; // cuál personaje se está mostrando (-1 = ninguno)
+
+    // Botones de la pantalla Characters (6 cards)
+    std::vector<sf::RectangleShape> charCards;
+    std::vector<sf::Text>           charCardTexts;
 };
 
 #endif // MENUSCREEN_H
