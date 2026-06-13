@@ -101,7 +101,7 @@ void CharacterSelect::drawTextShadow(const std::string& str, unsigned int size,
     window.draw(text);
 }
 
-// ── Helper: dibujar portrait centrado en (cx,cy) con tamaño size ─────────────
+// ── Helper: dibujar portrait ──────────────────────────────────────────────────
 void CharacterSelect::drawPortrait(int charIndex, float cx, float cy, float size,
                                    sf::Color borderColor, float borderThick)
 {
@@ -158,7 +158,6 @@ void CharacterSelect::handleEvents()
         if (event.type == sf::Event::Closed)
             window.close();
 
-        // Hover solo en fase PICKING
         if (event.type == sf::Event::MouseMoved && phase == Phase::PICKING)
             hoveredCard = getCardAt(sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
 
@@ -167,7 +166,7 @@ void CharacterSelect::handleEvents()
         {
             sf::Vector2i mp(event.mouseButton.x, event.mouseButton.y);
 
-            // ── PICKING: J1 y J2 eligen alternando ───────────────────────────
+            // ── PICKING ──────────────────────────────────────────────────────
             if (phase == Phase::PICKING)
             {
                 int clicked = getCardAt(mp);
@@ -177,21 +176,18 @@ void CharacterSelect::handleEvents()
 
                 if (isJ1Turn)
                 {
-                    bool alreadyPickedByJ1 = std::find(p1Picks.begin(), p1Picks.end(),
-                                                       clicked) != p1Picks.end();
-                    if (alreadyPickedByJ1) continue;
+                    bool alreadyPicked = std::find(p1Picks.begin(), p1Picks.end(), clicked) != p1Picks.end();
+                    if (alreadyPicked) continue;
                     p1Picks.push_back(clicked);
                 }
                 else
                 {
-                    bool alreadyPickedByJ2 = std::find(p2Picks.begin(), p2Picks.end(),
-                                                       clicked) != p2Picks.end();
-                    if (alreadyPickedByJ2) continue;
+                    bool alreadyPicked = std::find(p2Picks.begin(), p2Picks.end(), clicked) != p2Picks.end();
+                    if (alreadyPicked) continue;
                     p2Picks.push_back(clicked);
                 }
 
                 pickTurn++;
-
                 if (pickTurn >= 6)
                 {
                     phase      = Phase::ORDER;
@@ -201,7 +197,7 @@ void CharacterSelect::handleEvents()
                 }
             }
 
-            // ── ORDER: draft de orden J1→J2→J2→J1→J1→J2 ─────────────────────
+            // ── ORDER ────────────────────────────────────────────────────────
             else if (phase == Phase::ORDER)
             {
                 const bool draftIsJ1[6]  = { true,  false, false, true,  true,  false };
@@ -221,7 +217,6 @@ void CharacterSelect::handleEvents()
 
                     if (!rect.contains(static_cast<sf::Vector2f>(mp))) continue;
 
-                    // CORRECCIÓN ERROR 1: Verificar si el personaje YA ESTÁ en el equipo
                     bool alreadyPlaced = false;
                     if (curIsJ1) {
                         for (int t = 0; t < 3; ++t) if (p1Team[t] == picks[i]) alreadyPlaced = true;
@@ -229,25 +224,18 @@ void CharacterSelect::handleEvents()
                         for (int t = 0; t < 3; ++t) if (p2Team[t] == picks[i]) alreadyPlaced = true;
                     }
 
-                    // Si ya lo asignó a una ronda, ignoramos el clic
                     if (alreadyPlaced) break; 
 
-                    // Asignar al slot correspondiente
-                    if (curIsJ1)
-                        p1Team[curSlot] = picks[i];
-                    else
-                        p2Team[curSlot] = picks[i];
+                    if (curIsJ1) p1Team[curSlot] = picks[i];
+                    else         p2Team[curSlot] = picks[i];
 
                     orderTurn++;
-
-                    if (orderTurn >= 6)
-                        phase = Phase::CONFIRM;
-
+                    if (orderTurn >= 6) phase = Phase::CONFIRM;
                     break;
                 }
             }
 
-            // ── CONFIRM: botones JUGAR / VOLVER ──────────────────────────────
+            // ── CONFIRM ──────────────────────────────────────────────────────
             else if (phase == Phase::CONFIRM)
             {
                 sf::FloatRect btnJugar(220.f, 530.f, 160.f, 50.f);
@@ -275,7 +263,7 @@ void CharacterSelect::handleEvents()
                 }
             }
 
-            // ── STAGE_SELECT: elegir escenario manualmente ────────────────────
+            // ── STAGE_SELECT ─────────────────────────────────────────────────
             else if (phase == Phase::STAGE_SELECT && stageAnimDone)
             {
                 launchBattle = true;
@@ -288,20 +276,7 @@ void CharacterSelect::handleEvents()
 // ── update ────────────────────────────────────────────────────────────────────
 void CharacterSelect::update()
 {
-    if (phase == Phase::STAGE_SELECT && !stageAnimDone)
-    {
-        float elapsed = stageAnimClock.getElapsedTime().asSeconds();
-        if (elapsed >= 2.0f)
-        {
-            selectedStage = std::rand() % NUM_STAGES;
-            stageAnimDone = true;
-        }
-        else
-        {
-            int frame = static_cast<int>(elapsed / 0.15f) % NUM_STAGES;
-            selectedStage = frame;
-        }
-    }
+    // Limpiamos update para dejar la lógica de animación dentro del render (drawStageSelect)
 }
 
 // ── drawPickingScreen ─────────────────────────────────────────────────────────
@@ -484,50 +459,39 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
 // ── drawConfirmScreen ─────────────────────────────────────────────────────────
 void CharacterSelect::drawConfirmScreen()
 {
-    // Si hay textura de fondo para el VS, la dibujamos; si no, limpiamos la pantalla
     if (vsBgTexture.getSize().x > 0)
         window.draw(vsBgSprite);
     else
         window.clear(sf::Color(18, 18, 32));
 
-    // Título superior central
     {
         sf::Text t("CONFIRMAR EQUIPOS", font, 36);
         float tx = (800.f - t.getLocalBounds().width) / 2.f;
         drawTextShadow("CONFIRMAR EQUIPOS", 36, sf::Color(255, 215, 0), tx, 20.f, sf::Text::Bold);
     }
 
-    // Títulos principales de los Jugadores
     drawTextShadow("JUGADOR 1", 24, sf::Color(100, 180, 255), 100.f, 80.f, sf::Text::Bold);
     drawTextShadow("JUGADOR 2", 24, sf::Color(255, 120, 120), 580.f, 80.f, sf::Text::Bold);
 
-    // Renderizado vertical simplificado y limpio de los personajes elegidos
     for (int i = 0; i < 3; ++i)
     {
-        // ─── JUGADOR 1 (Izquierda) ───
         float cx1 = 150.f;
-        float cy1 = 170.f + i * 130.f; // Separación vertical constante
+        float cy1 = 170.f + i * 130.f; 
         
-        // Dibujamos la foto SIN borde exterior (Transparent, grosor 0.f)
         drawPortrait(p1Team[i], cx1, cy1, 100.f, sf::Color::Transparent, 0.f);
         
-        // Nombre del personaje abajo de su foto
         sf::Text n1(characters[p1Team[i]].name, font, 16);
         drawTextShadow(characters[p1Team[i]].name, 16, sf::Color::White, cx1 - n1.getLocalBounds().width / 2.f, cy1 + 55.f);
 
-        // ─── JUGADOR 2 (Derecha) ───
         float cx2 = 640.f;
         float cy2 = 170.f + i * 130.f;
 
-        // Dibujamos la foto SIN borde exterior (Transparent, grosor 0.f)
         drawPortrait(p2Team[i], cx2, cy2, 100.f, sf::Color::Transparent, 0.f);
 
-        // Nombre del personaje abajo de su foto
         sf::Text n2(characters[p2Team[i]].name, font, 16);
         drawTextShadow(characters[p2Team[i]].name, 16, sf::Color::White, cx2 - n2.getLocalBounds().width / 2.f, cy2 + 55.f);
     }
 
-    // Botón central inferior: JUGAR (Verde)
     sf::RectangleShape btnJ(sf::Vector2f(160.f, 50.f));
     btnJ.setFillColor(sf::Color(0, 160, 0));
     btnJ.setOutlineColor(sf::Color::White);
@@ -536,7 +500,6 @@ void CharacterSelect::drawConfirmScreen()
     window.draw(btnJ);
     drawTextShadow("JUGAR", 22, sf::Color::White, 255.f, 540.f, sf::Text::Bold);
 
-    // Botón central inferior: VOLVER (Rojo)
     sf::RectangleShape btnV(sf::Vector2f(160.f, 50.f));
     btnV.setFillColor(sf::Color(160, 0, 0));
     btnV.setOutlineColor(sf::Color::White);
@@ -551,25 +514,119 @@ void CharacterSelect::drawConfirmScreen()
 // ── drawStageSelect ───────────────────────────────────────────────────────────
 void CharacterSelect::drawStageSelect()
 {
-    if (selectedStage >= 0 && selectedStage < NUM_STAGES)
-        window.draw(stageBgSprites[selectedStage]);
+    // Fondo VS de base
+    if (vsBgTexture.getSize().x > 0)
+        window.draw(vsBgSprite);
     else
-        window.clear(sf::Color(18, 18, 32));
+        window.clear(sf::Color(10, 10, 20));
+
+    // Título
+    sf::Text title("Sorteo de Escenario", font, 32);
+    drawTextShadow("Sorteo de Escenario", 32, sf::Color(255, 215, 0),
+                   (800.f - title.getLocalBounds().width) / 2.f, 18.f, sf::Text::Bold);
+
+    // ── Animación de ruleta ───────────────────────────────────────────────────
+    float elapsed = stageAnimClock.getElapsedTime().asSeconds();
+    int displayIndex;
 
     if (!stageAnimDone)
     {
-        drawTextShadow("Sorteando escenario...", 28, sf::Color(255, 215, 0),
-                       200.f, 260.f, sf::Text::Bold);
+        // Velocidad decrece con el tiempo
+        float interval = 0.06f + (elapsed / 2.5f) * 0.24f;
+        displayIndex   = static_cast<int>(elapsed / interval) % NUM_STAGES;
+
+        if (elapsed >= 3.0f)
+        {
+            selectedStage = std::rand() % NUM_STAGES;
+            stageAnimDone = true;
+            displayIndex  = selectedStage;
+        }
     }
     else
     {
-        const std::string stageNames[NUM_STAGES] = {
-            "Campo Abierto", "Cristales Rojos", "Arena Gladiadores"
-        };
-        drawTextShadow("Escenario: " + stageNames[selectedStage], 28,
-                       sf::Color(255, 215, 0), 160.f, 240.f, sf::Text::Bold);
-        drawTextShadow("Haz clic para comenzar la batalla!", 20,
-                       sf::Color::White, 190.f, 290.f);
+        displayIndex = selectedStage;
+    }
+
+    // ── Dibujar las 3 miniaturas ──────────────────────────────────────────────
+    const float THUMB_W     = 200.f;
+    const float THUMB_H     = 120.f;
+    const float THUMB_W_SEL = 260.f;   
+    const float THUMB_H_SEL = 156.f;
+    const float TOTAL_Y     = 200.f;
+
+    float totalWidth = THUMB_W * 2.f + THUMB_W_SEL + 20.f * 2.f;
+    float startX     = (800.f - totalWidth) / 2.f;
+    float curX = startX;
+
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        bool isSelected = (i == displayIndex);
+        float w = isSelected ? THUMB_W_SEL : THUMB_W;
+        float h = isSelected ? THUMB_H_SEL : THUMB_H;
+        float y = TOTAL_Y + (isSelected ? 0.f : (THUMB_H_SEL - THUMB_H) / 2.f);
+
+        if (stageBgTextures[i].getSize().x > 0)
+        {
+            sf::Vector2u sz = stageBgTextures[i].getSize();
+            stageBgSprites[i].setScale(w / sz.x, h / sz.y);
+            stageBgSprites[i].setPosition(curX, y);
+            window.draw(stageBgSprites[i]);
+        }
+
+        sf::RectangleShape border(sf::Vector2f(w, h));
+        border.setPosition(curX, y);
+        border.setFillColor(sf::Color::Transparent);
+        if (isSelected)
+        {
+            border.setOutlineColor(sf::Color(255, 215, 0));
+            border.setOutlineThickness(4.f);
+        }
+        else
+        {
+            border.setOutlineColor(sf::Color(100, 100, 140));
+            border.setOutlineThickness(2.f);
+        }
+        window.draw(border);
+
+        curX += w + 20.f;
+    }
+
+    // ── Nombres de los escenarios ─────────────────────────────────────────────
+    const std::string STAGE_NAMES[NUM_STAGES] = { "Campo Abierto", "Cristales Rojos", "Arena Gladiadores" };
+    curX = startX;
+    
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        bool  isSelected = (i == displayIndex);
+        float w          = isSelected ? THUMB_W_SEL : THUMB_W;
+        float nameY      = TOTAL_Y + THUMB_H_SEL + 10.f;
+
+        sf::Text nm(STAGE_NAMES[i], font, isSelected ? 18 : 14);
+        float nmX = curX + (w - nm.getLocalBounds().width) / 2.f;
+        
+        drawTextShadow(STAGE_NAMES[i], isSelected ? 18 : 14,
+                       isSelected ? sf::Color(255, 215, 0) : sf::Color(180, 180, 180),
+                       nmX, nameY);
+        curX += w + 20.f;
+    }
+
+    // ── Mensaje inferior ──────────────────────────────────────────────────────
+    if (stageAnimDone)
+    {
+        std::string msg = "Escenario: " + STAGE_NAMES[selectedStage];
+        sf::Text t(msg, font, 24);
+        float tx = (800.f - t.getLocalBounds().width) / 2.f;
+        drawTextShadow(msg, 24, sf::Color(100, 255, 100), tx, 420.f, sf::Text::Bold);
+        
+        sf::Text t2("Haz clic para comenzar la batalla!", font, 20);
+        float tx2 = (800.f - t2.getLocalBounds().width) / 2.f;
+        drawTextShadow("Haz clic para comenzar la batalla!", 20, sf::Color::White, tx2, 460.f);
+    }
+    else
+    {
+        sf::Text t("Sorteando escenario...", font, 20);
+        float tx = (800.f - t.getLocalBounds().width) / 2.f;
+        drawTextShadow("Sorteando escenario...", 20, sf::Color(200, 200, 255), tx, 440.f);
     }
 
     window.display();

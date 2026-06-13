@@ -39,9 +39,6 @@ private:
     // ── Fases ─────────────────────────────────────────────────────────────────
     // PICKING:      alternando J1→J2→J1→J2→J1→J2 (6 picks en total)
     // ORDER:        draft de orden — patrón J1,J2,J2,J1,J1,J2 (6 sub-turnos)
-    //               orderTurn 0→J1 elige Ronda1, 1→J2 elige Ronda1,
-    //               2→J2 elige Ronda2, 3→J1 elige Ronda2,
-    //               4→J1 elige Ronda3, 5→J2 elige Ronda3
     // CONFIRM:      pantalla final con fondo VS y equipos ordenados
     // STAGE_SELECT: ruleta de escenario
     enum class Phase { PICKING, ORDER, CONFIRM, STAGE_SELECT };
@@ -53,7 +50,7 @@ private:
 
     // Dibujo por fase
     void drawPickingScreen();
-    void drawOrderScreen(bool isP1, int targetRound); // targetRound = ronda que se está asignando
+    void drawOrderScreen(bool isP1, int targetRound); 
     void drawConfirmScreen();
     void drawStageSelect();
 
@@ -79,29 +76,25 @@ private:
     // ── Grid de selección ─────────────────────────────────────────────────────
     static const int COLS    = 3;
     static const int ROWS    = 2;
-    static const int CARD_W  = 230;   // ajustado para 800px de ancho
-    static const int CARD_H  = 217;   // ajustado para 600px de alto
-    static const int GRID_X  = 40;    // margen izquierdo
-    static const int GRID_Y  = 140;   // margen superior (espacio para títulos)
+    static const int CARD_W  = 230;   
+    static const int CARD_H  = 217;   
+    static const int GRID_X  = 40;    
+    static const int GRID_Y  = 140;   
     static const int PADDING = 15;
 
     int hoveredCard;   // carta bajo el cursor (-1 = ninguna)
 
-    // ── Sistema de picks (alternando J1/J2, 3 picks cada uno) ────────────────
-    // pickOrder[i] = 0 → J1 elige en el turno i, 1 → J2
-    // Orden: J1, J2, J1, J2, J1, J2
-    int pickTurn;           // 0..5 (cuántos picks se han hecho)
-    std::vector<int> p1Picks;   // índices elegidos por J1 (0..5)
-    std::vector<int> p2Picks;   // índices elegidos por J2 (0..5)
+    // ── Sistema de picks ──────────────────────────────────────────────────────
+    int pickTurn;           
+    std::vector<int> p1Picks;   
+    std::vector<int> p2Picks;   
 
     // ── Orden de batalla ──────────────────────────────────────────────────────
-    // Después de los picks, cada jugador ordena su equipo.
-    // orderSelected[i] = índice dentro de p1Picks/p2Picks ya colocado
-    std::array<int,3> p1Team;   // equipo J1 en orden de batalla
-    std::array<int,3> p2Team;   // equipo J2 en orden de batalla
-    std::vector<int>  orderSelected;  // picks ya colocados por el jugador activo
-    int               orderSlot;      // slot actual a llenar (0,1,2) — compartido
-    int               orderTurn;      // 0..5: sub-turno del draft de orden
+    std::array<int,3> p1Team;   
+    std::array<int,3> p2Team;   
+    std::vector<int>  orderSelected;  
+    int               orderSlot;      
+    int               orderTurn;      
 
     // ── Fondo VS y escenario ──────────────────────────────────────────────────
     sf::Texture vsBgTexture;
