@@ -2,31 +2,32 @@
 #include <algorithm>
 #include <iostream>
 
+// Definición de la constante estática (necesaria en C++11/14)
+const int Pokemonster::MAX_ENERGY;
+
 Pokemonster::Pokemonster()
-    : name(""), hpMax(1), hpActual(1), attackStat(1), defense(0), moves(),
+    : name(""), hpMax(1), hpActual(1), attackStat(1), defense(0),
       frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
-      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr)
-{
-}
+      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
+      energy(3)   // empieza con 3 de 10
+{}
 
-Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack, int defense,
-                         const std::vector<Move>& moves)
-    : name(name), hpMax(hpMax), hpActual(hpMax), attackStat(attack), defense(defense),
-      moves(moves), frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
+Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
+                         int defense, const std::vector<Move>& moves)
+    : name(name), hpMax(hpMax), hpActual(hpMax), attackStat(attack),
+      defense(defense), moves(moves),
+      frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
-      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr)
-{
-}
+      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
+      energy(3)   // empieza con 3 de 10
+{}
 
+// ── Sprite ────────────────────────────────────────────────────────────────────
 bool Pokemonster::loadSpriteSheet(const std::string& path, int fWidth, int fHeight)
 {
     if (!texture.loadFromFile(path))
-    {
-        std::cerr << "Failed to load sprite sheet: " << path << std::endl;
-        return false;
-    }
-
+    { std::cerr << "Failed to load: " << path << "\n"; return false; }
     sprite.setTexture(texture);
     frameWidth  = fWidth;
     frameHeight = fHeight;
@@ -36,9 +37,8 @@ bool Pokemonster::loadSpriteSheet(const std::string& path, int fWidth, int fHeig
 
 void Pokemonster::setFrame(int row, int col)
 {
-    int x = col * frameWidth;
-    int y = row * frameHeight;
-    sprite.setTextureRect(sf::IntRect(x, y, frameWidth, frameHeight));
+    sprite.setTextureRect(sf::IntRect(col * frameWidth, row * frameHeight,
+                                     frameWidth, frameHeight));
 }
 
 void Pokemonster::playAnimation(int row, int framesAmount)
@@ -53,70 +53,66 @@ void Pokemonster::playAnimation(int row, int framesAmount)
 
 void Pokemonster::updateAnimation()
 {
-    if (!isAttacking) return;
-    if (frameDuration <= 0.f || maxFrames <= 0) return;
+    if (!isAttacking || frameDuration <= 0.f || maxFrames <= 0) return;
 
     if (animClock.getElapsedTime().asSeconds() >= frameDuration)
     {
         currentFrame++;
-
         if (currentFrame >= maxFrames)
         {
-            // ── BUG 1 FIX ──────────────────────────────────────────────────
-            // El daño AHORA se aplica cuando la animación de ataque termina,
-            // NO al inicio. Así el HP del enemigo no baja al mismo tiempo
-            // que el del jugador.
-            if (hasPendingDamage && damageTarget != nullptr)
+            // Aplicar daño diferido al final de la animación
+            if (hasPendingDamage && damageTarget)
             {
                 damageTarget->takeDamage(pendingDamage);
                 hasPendingDamage = false;
                 damageTarget     = nullptr;
                 pendingDamage    = 0;
             }
-            // ───────────────────────────────────────────────────────────────
-
-            currentRow  = 0;   // volver a fila idle
-            isAttacking = false;
+            currentRow   = 0;
+            isAttacking  = false;
             currentFrame = 0;
         }
-
         setFrame(currentRow, currentFrame);
         animClock.restart();
     }
 }
 
+// ── Energía ───────────────────────────────────────────────────────────────────
+void Pokemonster::addEnergy(int amount)
+{
+    energy = std::min(energy + amount, MAX_ENERGY);
+}
+
+bool Pokemonster::canUseMove(int moveIndex) const
+{
+    if (moveIndex < 0 || moveIndex >= (int)moves.size()) return false;
+    return energy >= moves[moveIndex].energyCost;
+}
+
+// ── Ataque ────────────────────────────────────────────────────────────────────
 void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 {
-    if (selectedMoveIndex < 0 ||
-        selectedMoveIndex >= static_cast<int>(moves.size()))
-    {
-        std::cerr << "Invalid move index: " << selectedMoveIndex << std::endl;
-        return;
-    }
+    if (selectedMoveIndex < 0 || selectedMoveIndex >= (int)moves.size()) return;
+    if (!canUseMove(selectedMoveIndex)) return;  // seguridad extra
 
-    const Move& selectedMove = moves[selectedMoveIndex];
+    const Move& m = moves[selectedMoveIndex];
 
-    // ── BUG 2 FIX ──────────────────────────────────────────────────────────
-    // Cada movimiento tiene su propia fila (animationRow) y cantidad de
-    // frames (frameCount) definidos en Move.h. Aquí se usa esa info para
-    // reproducir la animación correcta según la habilidad seleccionada.
-    playAnimation(selectedMove.animationRow, selectedMove.frameCount);
-    // ───────────────────────────────────────────────────────────────────────
+    // Descontar energía
+    energy -= m.energyCost;
+    if (energy < 0) energy = 0;
 
-    // ── BUG 1 FIX: guardar daño como pendiente ─────────────────────────────
-    // El daño se calcula ahora pero se guarda; se aplica al final de la
-    // animación en updateAnimation(), no de forma inmediata.
-    int damage       = std::max(1, selectedMove.power + attackStat - target.getDefense());
-    pendingDamage    = damage;
-    damageTarget     = &target;
+    // Animación correcta según habilidad (Bug 2 fix)
+    playAnimation(m.animationRow, m.frameCount);
+
+    // Daño diferido (Bug 1 fix)
+    int damage    = std::max(1, m.power + attackStat - target.getDefense());
+    pendingDamage = damage;
+    damageTarget  = &target;
     hasPendingDamage = true;
-    // ───────────────────────────────────────────────────────────────────────
 }
 
-void Pokemonster::setPosition(float x, float y)
-{
-    sprite.setPosition({x, y});
-}
+// ── Otros ─────────────────────────────────────────────────────────────────────
+void Pokemonster::setPosition(float x, float y) { sprite.setPosition({x, y}); }
 
 void Pokemonster::takeDamage(int damage)
 {

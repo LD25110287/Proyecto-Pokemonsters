@@ -18,29 +18,36 @@ public:
     void update();
     void draw(sf::RenderTarget& target);
 
-    // Retorna índice del ataque (0-3) o -1 si no hubo selección
+    // Retorna índice del ataque (0-3) o -1 si no hubo click válido
     int handleMouseClick(sf::Vector2i mousePos);
-
-    // Para multijugador: actualiza los textos de botones con los movimientos de un Pokémon específico
     void updateMoveButtons(Pokemonster* pokemon);
 
 private:
-    sf::Vector2u winSize;
+    void buildEnergyBar(std::vector<sf::RectangleShape>& cells,
+                        float x, float y, sf::Color activeColor);
 
+    sf::Vector2u winSize;
     Pokemonster* player;
     Pokemonster* enemy;
 
-    // HP bars
-    sf::RectangleShape playerHpBack;
-    sf::RectangleShape playerHpFront;
-    sf::RectangleShape enemyHpBack;
-    sf::RectangleShape enemyHpFront;
+    // Barras de HP
+    sf::RectangleShape playerHpBack,  playerHpFront;
+    sf::RectangleShape enemyHpBack,   enemyHpFront;
 
-    // Move buttons
+    // Barras de energía (10 celdas cada una)
+    std::vector<sf::RectangleShape> playerEnergyCells;
+    std::vector<sf::RectangleShape> enemyEnergyCells;
+
+    // Botones de movimiento
     std::vector<sf::RectangleShape> moveButtons;
-    std::vector<sf::Text> moveTexts;
+    std::vector<sf::Text>           moveTexts;
+    std::vector<sf::Text>           moveCostTexts;  // muestra el costo de energía
 
     sf::Font font;
+
+    // Colores base para cada botón (por slot)
+    static const sf::Color BTN_ACTIVE;
+    static const sf::Color BTN_DISABLED;
 };
 
 #endif // BATTLEUI_H

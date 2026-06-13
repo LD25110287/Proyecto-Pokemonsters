@@ -24,6 +24,14 @@ public:
     bool isFainted()   const;
     bool isAnimating() const { return isAttacking; }
 
+    // ── Energía ───────────────────────────────────────────────────────────
+    static const int MAX_ENERGY = 10;
+    int  getEnergy()    const { return energy; }
+    int  getMaxEnergy() const { return MAX_ENERGY; }
+    void addEnergy(int amount);          // gana energía (cap a MAX_ENERGY)
+    bool canUseMove(int moveIndex) const; // true si tiene suficiente energía
+    // ──────────────────────────────────────────────────────────────────────
+
     const std::vector<Move>& getMoves()  const;
     const std::string&        getName()  const;
     int getHP()      const;
@@ -34,31 +42,28 @@ public:
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
-    std::string      name;
-    int              hpMax;
-    int              hpActual;
-    int              attackStat;
-    int              defense;
+    std::string       name;
+    int               hpMax;
+    int               hpActual;
+    int               attackStat;
+    int               defense;
     std::vector<Move> moves;
 
     sf::Texture texture;
     sf::Sprite  sprite;
-    int frameWidth;
-    int frameHeight;
-
-    int   currentFrame;
-    int   currentRow;
-    int   maxFrames;
+    int frameWidth, frameHeight;
+    int currentFrame, currentRow, maxFrames;
     float frameDuration;
     bool  isAttacking;
     sf::Clock animClock;
 
-    // ── BUG 1 FIX: daño diferido ──────────────────────────────────────────
-    // El daño se guarda aquí y se aplica solo cuando la animación termina.
+    // Daño diferido (Bug 1 fix)
     int          pendingDamage;
     bool         hasPendingDamage;
     Pokemonster* damageTarget;
-    // ──────────────────────────────────────────────────────────────────────
+
+    // Energía
+    int energy;
 };
 
 #endif // POKEMONSTER_H
