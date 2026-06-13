@@ -65,8 +65,8 @@ private:
     static const int ROWS    = 2;
     static const int CARD_W  = 160;
     static const int CARD_H  = 160;
-    static const int GRID_X  = 80;
-    static const int GRID_Y  = 120;
+    static const int GRID_X  = 140;
+    static const int GRID_Y  = 180;
     static const int PADDING = 20;
 
     int  hoveredCard;

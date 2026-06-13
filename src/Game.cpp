@@ -72,33 +72,25 @@ static const CharInfo CHAR_TABLE[6] = {
 };
 
 // ── Escala visual por personaje ───────────────────────────────────────────────
-// Sleipmon y Bioquetzalmon como referencia visual correcta.
-// Los demás ajustados para verse proporcionales sin tapar las barras de HP.
 struct ScaleInfo { float scalePlayer; float scaleEnemy; };
-
 static const ScaleInfo SCALE_TABLE[6] = {
-    {3.5f, 2.5f},   // 0: Exdarktyranomon (50x50 → x3.5 = 175px, proporcional)
-    {2.0f, 1.5f},   // 1: BeelStarmon     (100x100 → reducido)
-    {2.0f, 1.5f},   // 2: Bioquetzalmon   (100x100 → referencia correcta)
-    {1.5f, 1.5f},   // 3: Jesmon          (100x100)
-    {2.5f, 1.8f},   // 4: Sleipmon        (150x80  → referencia correcta)
-    {2.0f, 1.5f},   // 5: Magnamon        (100x100)
+    {3.5f, 2.5f},
+    {2.0f, 1.5f},
+    {2.0f, 1.5f},
+    {1.5f, 1.5f},
+    {2.5f, 1.8f},
+    {2.0f, 1.5f},
 };
 
 // ── Posiciones estilo Pokémon clásico ─────────────────────────────────────────
-// Jugador: abajo-izquierda. Enemigo: arriba-derecha.
-// Las posiciones Y se ajustan para que las barras de HP (que están más arriba)
-// no tapen el sprite. Barra jugador en y≈370, sprite jugador empieza en y≈380.
 struct PosInfo { float px, py, ex, ey; };
-
 static const PosInfo POS_TABLE[6] = {
-    //  jugador(x,  y)    enemigo(x,   y)
-    {  50.f, 370.f,   470.f,  120.f },  // 0: Exdarktyranomon
-    {  50.f, 360.f,   470.f,  110.f },  // 1: BeelStarmon
-    {  50.f, 360.f,   470.f,  110.f },  // 2: Bioquetzalmon
-    {  60.f, 410.f,   470.f,  110.f },  // 3: Jesmon
-    {  30.f, 370.f,   440.f,  130.f },  // 4: Sleipmon (más ancho)
-    {  50.f, 360.f,   470.f,  110.f },  // 5: Magnamon
+    {  50.f, 370.f,   470.f,  120.f },
+    {  50.f, 360.f,   470.f,  110.f },
+    {  50.f, 360.f,   470.f,  110.f },
+    {  60.f, 410.f,   470.f,  110.f },
+    {  30.f, 370.f,   440.f,  130.f },
+    {  50.f, 360.f,   470.f,  110.f },
 };
 
 // ── buildCharacter ────────────────────────────────────────────────────────────
@@ -120,13 +112,11 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 
     if (isPlayer)
     {
-        // Jugador: primer plano, abajo-izquierda, escala mayor
         p.setScale(s.scalePlayer, s.scalePlayer);
         p.setPosition(pos.px, pos.py);
     }
     else
     {
-        // Enemigo: al fondo, arriba-derecha, escala menor
         p.setScale(s.scaleEnemy, s.scaleEnemy);
         p.setPosition(pos.ex, pos.ey);
     }
@@ -138,10 +128,10 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 Game::Game(int p1Index, int p2Index, int bgIndex)
     : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
     , isRunning(true)
-    , currentTurn(TurnState::PLAYER_TURN)
-    , waitingForPlayer(true)
+    , currentTurn(TurnState::PLAYER1_TURN)   // J1 empieza
+    , waitingForInput(true)
     , animationPlaying(false)
-    , enemyAttackScheduled(false)
+    , delayScheduled(false)
     , player(buildCharacter(p1Index, true))
     , enemy(buildCharacter(p2Index, false))
     , battleUI(window.getSize())
@@ -169,7 +159,9 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
 
     battleUI.setPlayerPokemon(&player);
     battleUI.setEnemyPokemon(&enemy);
-    battleUI.updateMoveButtons(&player);
+    battleUI.updateMoveButtons(&player, true);
+    battleUI.updateMoveButtons(&enemy,  false);
+    battleUI.setActivePlayer(true);   // J1 comienza
     battleUI.update();
 }
 
@@ -190,22 +182,40 @@ void Game::run()
                 event.key.code == sf::Keyboard::Escape)
             { window.close(); isRunning = false; }
 
+            // ── Clicks ────────────────────────────────────────────────────────
             if (event.type == sf::Event::MouseButtonPressed &&
                 event.mouseButton.button == sf::Mouse::Left)
             {
-                if (currentTurn == TurnState::PLAYER_TURN &&
-                    waitingForPlayer && !animationPlaying)
+                // Solo procesar si estamos esperando input y no hay animación
+                if (!waitingForInput || animationPlaying || delayScheduled)
+                    continue;
+
+                sf::Vector2i mp(event.mouseButton.x, event.mouseButton.y);
+
+                if (currentTurn == TurnState::PLAYER1_TURN)
                 {
-                    sf::Vector2i mp(event.mouseButton.x, event.mouseButton.y);
-                    int moveIndex = battleUI.handleMouseClick(mp);
+                    // J1 ataca → sus botones están a la DERECHA
+                    int moveIndex = battleUI.handleMouseClick(mp, true);
                     if (moveIndex >= 0)
                     {
-                        player.attack(enemy, moveIndex);
-                        animationPlaying     = true;
-                        waitingForPlayer     = false;
-                        currentTurn          = TurnState::ENEMY_TURN;
-                        enemyAttackScheduled = true;
-                        turnClock.restart();
+                        player.attack(enemy, moveIndex);   // J1 ataca a J2
+                        animationPlaying = true;
+                        waitingForInput  = false;
+                        delayScheduled   = true;
+                        animDelayClock.restart();
+                    }
+                }
+                else if (currentTurn == TurnState::PLAYER2_TURN)
+                {
+                    // J2 ataca → sus botones están a la IZQUIERDA
+                    int moveIndex = battleUI.handleMouseClick(mp, false);
+                    if (moveIndex >= 0)
+                    {
+                        enemy.attack(player, moveIndex);   // J2 ataca a J1
+                        animationPlaying = true;
+                        waitingForInput  = false;
+                        delayScheduled   = true;
+                        animDelayClock.restart();
                     }
                 }
             }
@@ -223,35 +233,42 @@ void Game::update()
     player.updateAnimation();
     enemy.updateAnimation();
 
+    // Apagar flag de animación cuando ambos terminaron
     if (animationPlaying && !player.isAnimating() && !enemy.isAnimating())
         animationPlaying = false;
 
-    // Turno del enemigo: espera 800ms después del ataque del jugador
-    if (currentTurn          == TurnState::ENEMY_TURN &&
-        enemyAttackScheduled && !animationPlaying      &&
-        turnClock.getElapsedTime().asMilliseconds() >= 800)
+    // Esperar 600ms después del ataque antes de cambiar de turno
+    if (delayScheduled && !animationPlaying &&
+        animDelayClock.getElapsedTime().asMilliseconds() >= 600)
     {
+        delayScheduled = false;
+
+        // Ambos ganan 1 energía al final de cada turno
         player.addEnergy(1);
         enemy.addEnergy(1);
 
-        std::vector<int> usable;
-        for (int i = 0; i < (int)enemy.getMoves().size(); ++i)
-            if (enemy.canUseMove(i)) usable.push_back(i);
-
-        if (!usable.empty())
+        // Verificar si alguien murió antes de cambiar turno
+        if (player.isFainted() || enemy.isFainted())
         {
-            int moveIndex = usable[std::rand() % usable.size()];
-            enemy.attack(player, moveIndex);
-            animationPlaying = true;
+            currentTurn = TurnState::BATTLE_OVER;
+            isRunning   = false;
+            return;
         }
 
-        enemyAttackScheduled = false;
-        currentTurn          = TurnState::PLAYER_TURN;
-        waitingForPlayer     = true;
-    }
+        // Cambiar turno
+        if (currentTurn == TurnState::PLAYER1_TURN)
+        {
+            currentTurn = TurnState::PLAYER2_TURN;
+            battleUI.setActivePlayer(false);   // ahora es turno de J2
+        }
+        else
+        {
+            currentTurn = TurnState::PLAYER1_TURN;
+            battleUI.setActivePlayer(true);    // ahora es turno de J1
+        }
 
-    if (player.isFainted() || enemy.isFainted())
-    { currentTurn = TurnState::BATTLE_OVER; isRunning = false; }
+        waitingForInput = true;
+    }
 
     battleUI.update();
 }
@@ -260,11 +277,9 @@ void Game::update()
 void Game::render()
 {
     window.clear(sf::Color(30, 30, 50));
-
-    // Fondo de batalla
     window.draw(battleBg);
 
-    // Enemigo primero (al fondo), jugador encima (primer plano)
+    // Enemigo (J2) al fondo, jugador (J1) encima
     window.draw(enemy);
     window.draw(player);
 

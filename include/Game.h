@@ -8,13 +8,11 @@
 #include <cstdlib>
 #include <ctime>
 
-// Datos del personaje seleccionado pasados desde CharacterSelect
 struct CharacterData;
 
 class Game
 {
 public:
-    // Constructor que recibe los índices de personaje y el fondo elegido (0-2)
     Game(int p1Index, int p2Index, int bgIndex = -1);
     ~Game();
     void run();
@@ -24,27 +22,28 @@ private:
     void update();
     void render();
 
-    // Inicializa un Pokemonster según el índice (0-5)
     Pokemonster buildCharacter(int index, bool isPlayer);
 
-    enum class TurnState { PLAYER_TURN, ENEMY_TURN, BATTLE_OVER };
+    // PLAYER1_TURN: espera click de J1 en sus botones (derecha)
+    // PLAYER2_TURN: espera click de J2 en sus botones (izquierda)
+    // BATTLE_OVER : alguien ganó
+    enum class TurnState { PLAYER1_TURN, PLAYER2_TURN, BATTLE_OVER };
 
     sf::RenderWindow window;
     bool isRunning;
 
     TurnState currentTurn;
-    bool waitingForPlayer;
-    bool animationPlaying;
+    bool      waitingForInput;    // true = esperando click del jugador activo
+    bool      animationPlaying;
 
-    sf::Clock turnClock;
-    bool enemyAttackScheduled;
+    sf::Clock animDelayClock;     // pausa entre turno y turno
+    bool      delayScheduled;     // esperando la pausa antes de cambiar turno
 
-    Pokemonster player;
-    Pokemonster enemy;
+    Pokemonster player;   // Jugador 1
+    Pokemonster enemy;    // Jugador 2
 
     BattleUI battleUI;
 
-    // Fondo de batalla
     sf::Texture battleBgTexture;
     sf::Sprite  battleBg;
 };
