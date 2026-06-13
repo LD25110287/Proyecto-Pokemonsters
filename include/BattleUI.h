@@ -35,14 +35,9 @@ private:
     Pokemonster* enemy;    // Jugador 2
     bool         activeIsP1;
 
-    // ── Barras de HP (NUEVO: Texturas y Sprites) ──────────────────────────────
-    sf::Texture        playerHudTexture;
-    sf::Sprite         playerHudSprite;
-    sf::RectangleShape playerHpFront;
-
-    sf::Texture        enemyHudTexture;
-    sf::Sprite         enemyHudSprite;
-    sf::RectangleShape enemyHpFront;
+    // ── Barras de HP ──────────────────────────────────────────────────────────
+    sf::RectangleShape playerHpBack,  playerHpFront;
+    sf::RectangleShape enemyHpBack,   enemyHpFront;
 
     // ── Barras de energía ─────────────────────────────────────────────────────
     std::vector<sf::RectangleShape> playerEnergyCells;
