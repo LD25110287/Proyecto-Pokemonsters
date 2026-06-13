@@ -102,8 +102,6 @@ void CharacterSelect::drawTextShadow(const std::string& str, unsigned int size,
 }
 
 // ── Helper: dibujar portrait centrado en (cx,cy) con tamaño size ─────────────
-// BUG FIX: usa una copia LOCAL del sprite para no contaminar el estado
-// compartido entre llamadas (escala y posición del sprite global se pisaban).
 void CharacterSelect::drawPortrait(int charIndex, float cx, float cy, float size,
                                    sf::Color borderColor, float borderThick)
 {
@@ -114,7 +112,6 @@ void CharacterSelect::drawPortrait(int charIndex, float cx, float cy, float size
     float scaleX = size / static_cast<float>(sz.x);
     float scaleY = size / static_cast<float>(sz.y);
 
-    // Copia local — no toca portraitSprites[charIndex]
     sf::Sprite local(portraits[charIndex]);
     local.setScale(scaleX, scaleY);
     local.setPosition(cx - size / 2.f, cy - size / 2.f);
@@ -180,7 +177,6 @@ void CharacterSelect::handleEvents()
 
                 if (isJ1Turn)
                 {
-                    // BUG FIX: J1 no puede elegir un personaje que ya eligió él mismo
                     bool alreadyPickedByJ1 = std::find(p1Picks.begin(), p1Picks.end(),
                                                        clicked) != p1Picks.end();
                     if (alreadyPickedByJ1) continue;
@@ -188,7 +184,6 @@ void CharacterSelect::handleEvents()
                 }
                 else
                 {
-                    // J2 no puede repetir un personaje que ya eligió él mismo
                     bool alreadyPickedByJ2 = std::find(p2Picks.begin(), p2Picks.end(),
                                                        clicked) != p2Picks.end();
                     if (alreadyPickedByJ2) continue;
@@ -197,7 +192,6 @@ void CharacterSelect::handleEvents()
 
                 pickTurn++;
 
-                // Cuando ambos tienen 3 picks, pasar a ordenar equipo J1
                 if (pickTurn >= 6)
                 {
                     phase      = Phase::ORDER;
@@ -208,11 +202,8 @@ void CharacterSelect::handleEvents()
             }
 
             // ── ORDER: draft de orden J1→J2→J2→J1→J1→J2 ─────────────────────
-            // orderTurn: 0=J1 R1, 1=J2 R1, 2=J2 R2, 3=J1 R2, 4=J1 R3, 5=J2 R3
             else if (phase == Phase::ORDER)
             {
-                // Quién elige y qué ronda llena en este sub-turno
-                // Patrón: J1,J2,J2,J1,J1,J2 → slots: 0,0,1,1,2,2
                 const bool draftIsJ1[6]  = { true,  false, false, true,  true,  false };
                 const int  draftSlot[6]  = { 0,     0,     1,     1,     2,     2     };
 
@@ -221,7 +212,6 @@ void CharacterSelect::handleEvents()
 
                 const std::vector<int>& picks = curIsJ1 ? p1Picks : p2Picks;
 
-                // Detectar click en una de las 3 miniaturas del jugador activo
                 for (int i = 0; i < 3; ++i)
                 {
                     float cx   = 130.f + i * 160.f;
@@ -231,24 +221,25 @@ void CharacterSelect::handleEvents()
 
                     if (!rect.contains(static_cast<sf::Vector2f>(mp))) continue;
 
-                    // No repetir un pick ya colocado por este jugador en este turno
-                    if (std::find(orderSelected.begin(), orderSelected.end(), i)
-                        != orderSelected.end()) break;
+                    // CORRECCIÓN ERROR 1: Verificar si el personaje YA ESTÁ en el equipo
+                    bool alreadyPlaced = false;
+                    if (curIsJ1) {
+                        for (int t = 0; t < 3; ++t) if (p1Team[t] == picks[i]) alreadyPlaced = true;
+                    } else {
+                        for (int t = 0; t < 3; ++t) if (p2Team[t] == picks[i]) alreadyPlaced = true;
+                    }
 
-                    // Asignar
+                    // Si ya lo asignó a una ronda, ignoramos el clic
+                    if (alreadyPlaced) break; 
+
+                    // Asignar al slot correspondiente
                     if (curIsJ1)
                         p1Team[curSlot] = picks[i];
                     else
                         p2Team[curSlot] = picks[i];
 
-                    orderSelected.push_back(i);
                     orderTurn++;
 
-                    // Si cambia de jugador, limpiar orderSelected
-                    if (orderTurn < 6 && draftIsJ1[orderTurn] != curIsJ1)
-                        orderSelected.clear();
-
-                    // Todos los sub-turnos completados
                     if (orderTurn >= 6)
                         phase = Phase::CONFIRM;
 
@@ -259,12 +250,11 @@ void CharacterSelect::handleEvents()
             // ── CONFIRM: botones JUGAR / VOLVER ──────────────────────────────
             else if (phase == Phase::CONFIRM)
             {
-                sf::FloatRect btnJugar(250.f, 520.f, 130.f, 50.f);
-                sf::FloatRect btnVolver(420.f, 520.f, 130.f, 50.f);
+                sf::FloatRect btnJugar(220.f, 530.f, 160.f, 50.f);
+                sf::FloatRect btnVolver(420.f, 530.f, 160.f, 50.f);
 
                 if (btnJugar.contains(static_cast<sf::Vector2f>(mp)))
                 {
-                    // Ir a selección de escenario
                     phase = Phase::STAGE_SELECT;
                     selectedStage   = -1;
                     stageAnimDone   = false;
@@ -272,7 +262,6 @@ void CharacterSelect::handleEvents()
                 }
                 else if (btnVolver.contains(static_cast<sf::Vector2f>(mp)))
                 {
-                    // Reiniciar todo
                     pickTurn = 0;
                     p1Picks.clear();
                     p2Picks.clear();
@@ -289,7 +278,6 @@ void CharacterSelect::handleEvents()
             // ── STAGE_SELECT: elegir escenario manualmente ────────────────────
             else if (phase == Phase::STAGE_SELECT && stageAnimDone)
             {
-                // Click en cualquier lugar lanza la batalla
                 launchBattle = true;
                 window.close();
             }
@@ -300,19 +288,16 @@ void CharacterSelect::handleEvents()
 // ── update ────────────────────────────────────────────────────────────────────
 void CharacterSelect::update()
 {
-    // Animación de ruleta de escenario (2 segundos de barajeo)
     if (phase == Phase::STAGE_SELECT && !stageAnimDone)
     {
         float elapsed = stageAnimClock.getElapsedTime().asSeconds();
         if (elapsed >= 2.0f)
         {
-            // Elegir escenario aleatorio al terminar
             selectedStage = std::rand() % NUM_STAGES;
             stageAnimDone = true;
         }
         else
         {
-            // Mostrar escenarios en secuencia rápida (efecto ruleta)
             int frame = static_cast<int>(elapsed / 0.15f) % NUM_STAGES;
             selectedStage = frame;
         }
@@ -326,17 +311,14 @@ void CharacterSelect::drawPickingScreen()
 
     bool isJ1Turn = (pickTurn % 2 == 0);
 
-    // ── Títulos de turno ──────────────────────────────────────────────────────
     sf::Color j1Color(100, 180, 255);
     sf::Color j2Color(255, 120, 120);
 
-    // J1 título (izquierda)
     drawTextShadow("Jugador 1 - Elige tu personaje", 18,
                    isJ1Turn ? j1Color : sf::Color(80, 80, 120),
                    10.f, 10.f,
                    isJ1Turn ? sf::Text::Bold : sf::Text::Regular);
 
-    // J2 título (derecha)
     {
         sf::Text t("Jugador 2 - Elige tu personaje", font, 18);
         float tx = 800.f - t.getLocalBounds().width - 10.f;
@@ -346,21 +328,13 @@ void CharacterSelect::drawPickingScreen()
                        !isJ1Turn ? sf::Text::Bold : sf::Text::Regular);
     }
 
-    // ── Miniaturas de picks ya realizados ────────────────────────────────────
-    // J1 picks (arriba izquierda, pequeñitos)
     for (int i = 0; i < (int)p1Picks.size(); ++i)
-        drawPortrait(p1Picks[i], 30.f + i * 50.f, 80.f, 40.f,
-                     j1Color, 2.f);
+        drawPortrait(p1Picks[i], 30.f + i * 50.f, 80.f, 40.f, j1Color, 2.f);
 
-    // J2 picks (arriba derecha)
     for (int i = 0; i < (int)p2Picks.size(); ++i)
-        drawPortrait(p2Picks[i], 800.f - 30.f - i * 50.f, 80.f, 40.f,
-                     j2Color, 2.f);
+        drawPortrait(p2Picks[i], 800.f - 30.f - i * 50.f, 80.f, 40.f, j2Color, 2.f);
 
-    // ── Indicador de turno ────────────────────────────────────────────────────
-    std::string turnMsg = isJ1Turn
-        ? ">>> Turno de Jugador 1 <<<"
-        : ">>> Turno de Jugador 2 <<<";
+    std::string turnMsg = isJ1Turn ? ">>> Turno de Jugador 1 <<<" : ">>> Turno de Jugador 2 <<<";
     sf::Color turnColor = isJ1Turn ? j1Color : j2Color;
     {
         sf::Text t(turnMsg, font, 16);
@@ -368,7 +342,6 @@ void CharacterSelect::drawPickingScreen()
         drawTextShadow(turnMsg, 16, turnColor, tx, 118.f, sf::Text::Bold);
     }
 
-    // ── Grid de personajes ────────────────────────────────────────────────────
     for (int row = 0; row < ROWS; ++row)
         for (int col = 0; col < COLS; ++col)
         {
@@ -378,12 +351,10 @@ void CharacterSelect::drawPickingScreen()
             float x = GRID_X + col * (CARD_W + PADDING);
             float y = GRID_Y + row * (CARD_H + PADDING);
 
-            // Color de la carta según estado
             sf::Color fillColor(40, 40, 60);
             sf::Color outColor(100, 100, 140);
             float outThick = 2.f;
 
-            // ¿Ya fue elegido por J1?
             bool pickedByJ1 = std::find(p1Picks.begin(), p1Picks.end(), idx) != p1Picks.end();
             bool pickedByJ2 = std::find(p2Picks.begin(), p2Picks.end(), idx) != p2Picks.end();
 
@@ -403,27 +374,19 @@ void CharacterSelect::drawPickingScreen()
             card.setPosition(x, y);
             window.draw(card);
 
-            // Portrait centrado en la carta — 120px = escala 1.2x sobre 100x100
             drawPortrait(idx, x + CARD_W / 2.f, y + CARD_H / 2.f - 15.f, 120.f);
 
-            // Nombre
             sf::Text nm(characters[idx].name, font, 13);
             nm.setFillColor(sf::Color::White);
-            nm.setPosition(x + (CARD_W - nm.getLocalBounds().width) / 2.f,
-                           y + CARD_H - 28.f);
+            nm.setPosition(x + (CARD_W - nm.getLocalBounds().width) / 2.f, y + CARD_H - 28.f);
             window.draw(nm);
 
-            // Badge de quién lo eligió
             if (pickedByJ1)
-            {
                 drawTextShadow("J1", 12, j1Color, x + 4.f, y + 4.f, sf::Text::Bold);
-            }
             if (pickedByJ2)
             {
                 sf::Text t2("J2", font, 12);
-                drawTextShadow("J2", 12, j2Color,
-                               x + CARD_W - t2.getLocalBounds().width - 8.f,
-                               y + 4.f, sf::Text::Bold);
+                drawTextShadow("J2", 12, j2Color, x + CARD_W - t2.getLocalBounds().width - 8.f, y + 4.f, sf::Text::Bold);
             }
         }
 
@@ -431,8 +394,6 @@ void CharacterSelect::drawPickingScreen()
 }
 
 // ── drawOrderScreen ───────────────────────────────────────────────────────────
-// Muestra la pantalla de elección de orden para el sub-turno actual del draft.
-// draftIsJ1/draftSlot indican quién elige y qué ronda está asignando.
 void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
 {
     window.clear(sf::Color(18, 18, 32));
@@ -441,20 +402,15 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
     std::string playerName = isP1 ? "Jugador 1" : "Jugador 2";
     const std::vector<int>& picks = isP1 ? p1Picks : p2Picks;
 
-    // Título con ronda objetivo
-    std::string title = playerName + " - Elige quien pelea en Ronda "
-                      + std::to_string(targetRound + 1);
+    std::string title = playerName + " - Elige quien pelea en Ronda " + std::to_string(targetRound + 1);
     {
         sf::Text t(title, font, 22);
         float tx = (800.f - t.getLocalBounds().width) / 2.f;
         drawTextShadow(title, 22, playerColor, tx, 20.f, sf::Text::Bold);
     }
 
-    drawTextShadow("Haz clic en el personaje que quieres para esta ronda", 15,
-                   sf::Color(200, 200, 200), 70.f, 60.f);
+    drawTextShadow("Haz clic en el personaje que quieres para esta ronda", 15, sf::Color(200, 200, 200), 70.f, 60.f);
 
-    // ── Slots de orden ya asignados (arriba) ─────────────────────────────────
-    // Mostramos los 3 slots del jugador actual con lo ya colocado
     const std::array<int,3>& team = isP1 ? p1Team : p2Team;
     for (int i = 0; i < 3; ++i)
     {
@@ -464,26 +420,20 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
         std::string slotLabel = "Ronda " + std::to_string(i + 1);
         {
             sf::Text t(slotLabel, font, 16);
-            drawTextShadow(slotLabel, 16, sf::Color(200, 200, 200),
-                           cx - t.getLocalBounds().width / 2.f, cy - 90.f);
+            drawTextShadow(slotLabel, 16, sf::Color(200, 200, 200), cx - t.getLocalBounds().width / 2.f, cy - 90.f);
         }
 
         if (team[i] >= 0)
         {
-            // Ya asignado
-            sf::Color borderCol = (i == targetRound)
-                ? sf::Color(255, 215, 0) : playerColor;
+            sf::Color borderCol = (i == targetRound) ? sf::Color(255, 215, 0) : playerColor;
             drawPortrait(team[i], cx, cy, 120.f, borderCol, 3.f);
-            drawTextShadow(characters[team[i]].name, 14, sf::Color::White,
-                           cx - 50.f, cy + 65.f);
+            drawTextShadow(characters[team[i]].name, 14, sf::Color::White, cx - 50.f, cy + 65.f);
         }
         else
         {
-            // Slot vacío
             sf::RectangleShape slot(sf::Vector2f(120.f, 120.f));
             slot.setFillColor(sf::Color(30, 30, 50));
-            slot.setOutlineColor(i == targetRound
-                ? sf::Color(255, 215, 0) : sf::Color(80, 80, 100));
+            slot.setOutlineColor(i == targetRound ? sf::Color(255, 215, 0) : sf::Color(80, 80, 100));
             slot.setOutlineThickness(i == targetRound ? 3.f : 2.f);
             slot.setPosition(cx - 60.f, cy - 60.f);
             window.draw(slot);
@@ -492,7 +442,6 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
         }
     }
 
-    // Separador
     sf::RectangleShape sep(sf::Vector2f(700.f, 2.f));
     sep.setFillColor(sf::Color(80, 80, 120));
     sep.setPosition(50.f, 310.f);
@@ -500,14 +449,17 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
 
     drawTextShadow("Tu equipo:", 16, sf::Color(180, 180, 255), 50.f, 320.f);
 
-    // ── Miniaturas clickeables (abajo) ────────────────────────────────────────
     for (int i = 0; i < 3; ++i)
     {
         float cx = 130.f + i * 160.f;
         float cy = 430.f;
 
-        bool alreadyPlaced = std::find(orderSelected.begin(),
-                                       orderSelected.end(), i) != orderSelected.end();
+        bool alreadyPlaced = false;
+        if (isP1) {
+            for (int t = 0; t < 3; ++t) if (p1Team[t] == picks[i]) alreadyPlaced = true;
+        } else {
+            for (int t = 0; t < 3; ++t) if (p2Team[t] == picks[i]) alreadyPlaced = true;
+        }
 
         sf::Color borderCol = alreadyPlaced ? sf::Color(60, 60, 60) : playerColor;
         drawPortrait(picks[i], cx, cy, 110.f, borderCol, 3.f);
@@ -518,8 +470,7 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
             overlay.setFillColor(sf::Color(0, 0, 0, 150));
             overlay.setPosition(cx - 55.f, cy - 55.f);
             window.draw(overlay);
-            drawTextShadow("OK", 20, sf::Color(100, 255, 100),
-                           cx - 15.f, cy - 12.f, sf::Text::Bold);
+            drawTextShadow("OK", 20, sf::Color(100, 255, 100), cx - 15.f, cy - 12.f, sf::Text::Bold);
         }
 
         drawTextShadow(characters[picks[i]].name, 13,
@@ -533,93 +484,66 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
 // ── drawConfirmScreen ─────────────────────────────────────────────────────────
 void CharacterSelect::drawConfirmScreen()
 {
-    // Fondo VS
+    // Si hay textura de fondo para el VS, la dibujamos; si no, limpiamos la pantalla
     if (vsBgTexture.getSize().x > 0)
         window.draw(vsBgSprite);
     else
         window.clear(sf::Color(18, 18, 32));
 
-    // Título
+    // Título superior central
     {
-        sf::Text t("Confirmacion", font, 34);
+        sf::Text t("CONFIRMAR EQUIPOS", font, 36);
         float tx = (800.f - t.getLocalBounds().width) / 2.f;
-        drawTextShadow("Confirmacion", 34, sf::Color(255, 215, 0),
-                       tx, 15.f, sf::Text::Bold);
+        drawTextShadow("CONFIRMAR EQUIPOS", 36, sf::Color(255, 215, 0), tx, 20.f, sf::Text::Bold);
     }
 
-    // ── Equipo J1 (izquierda) ─────────────────────────────────────────────────
-    drawTextShadow("Jugador 1", 20, sf::Color(100, 180, 255), 30.f, 65.f, sf::Text::Bold);
+    // Títulos principales de los Jugadores
+    drawTextShadow("JUGADOR 1", 24, sf::Color(100, 180, 255), 100.f, 80.f, sf::Text::Bold);
+    drawTextShadow("JUGADOR 2", 24, sf::Color(255, 120, 120), 580.f, 80.f, sf::Text::Bold);
+
+    // Renderizado vertical simplificado y limpio de los personajes elegidos
     for (int i = 0; i < 3; ++i)
     {
-        float cx = 80.f + i * 105.f;
-        float cy = 175.f;
+        // ─── JUGADOR 1 (Izquierda) ───
+        float cx1 = 150.f;
+        float cy1 = 170.f + i * 130.f; // Separación vertical constante
+        
+        // Dibujamos la foto SIN borde exterior (Transparent, grosor 0.f)
+        drawPortrait(p1Team[i], cx1, cy1, 100.f, sf::Color::Transparent, 0.f);
+        
+        // Nombre del personaje abajo de su foto
+        sf::Text n1(characters[p1Team[i]].name, font, 16);
+        drawTextShadow(characters[p1Team[i]].name, 16, sf::Color::White, cx1 - n1.getLocalBounds().width / 2.f, cy1 + 55.f);
 
-        // Badge de ronda
-        std::string badge = "R" + std::to_string(i + 1);
-        drawTextShadow(badge, 13, sf::Color(255, 215, 0), cx - 8.f, cy - 75.f);
+        // ─── JUGADOR 2 (Derecha) ───
+        float cx2 = 640.f;
+        float cy2 = 170.f + i * 130.f;
 
-        drawPortrait(p1Team[i], cx, cy, 110.f,
-                     i == 0 ? sf::Color(255, 215, 0) : sf::Color(100, 180, 255),
-                     i == 0 ? 4.f : 2.f);
+        // Dibujamos la foto SIN borde exterior (Transparent, grosor 0.f)
+        drawPortrait(p2Team[i], cx2, cy2, 100.f, sf::Color::Transparent, 0.f);
 
-        drawTextShadow(characters[p1Team[i]].name, 12, sf::Color::White,
-                       cx - 45.f, cy + 60.f);
+        // Nombre del personaje abajo de su foto
+        sf::Text n2(characters[p2Team[i]].name, font, 16);
+        drawTextShadow(characters[p2Team[i]].name, 16, sf::Color::White, cx2 - n2.getLocalBounds().width / 2.f, cy2 + 55.f);
     }
 
-    // ── Equipo J2 (derecha) ───────────────────────────────────────────────────
-    drawTextShadow("Jugador 2", 20, sf::Color(255, 120, 120), 490.f, 65.f, sf::Text::Bold);
-    for (int i = 0; i < 3; ++i)
-    {
-        float cx = 540.f + i * 105.f;
-        float cy = 175.f;
-
-        std::string badge = "R" + std::to_string(i + 1);
-        drawTextShadow(badge, 13, sf::Color(255, 215, 0), cx - 8.f, cy - 75.f);
-
-        drawPortrait(p2Team[i], cx, cy, 110.f,
-                     i == 0 ? sf::Color(255, 215, 0) : sf::Color(255, 120, 120),
-                     i == 0 ? 4.f : 2.f);
-
-        drawTextShadow(characters[p2Team[i]].name, 12, sf::Color::White,
-                       cx - 45.f, cy + 60.f);
-    }
-
-    // VS central
-    drawTextShadow("VS", 48, sf::Color::White, 372.f, 150.f, sf::Text::Bold);
-
-    // Separador
-    sf::RectangleShape sep(sf::Vector2f(700.f, 2.f));
-    sep.setFillColor(sf::Color(255, 255, 255, 80));
-    sep.setPosition(50.f, 380.f);
-    window.draw(sep);
-
-    // Resumen de rondas
-    drawTextShadow("Orden de batalla:", 16, sf::Color(220, 220, 220), 50.f, 395.f);
-    for (int i = 0; i < 3; ++i)
-    {
-        std::string line = "Ronda " + std::to_string(i+1) + ":  "
-                         + characters[p1Team[i]].name
-                         + "  vs  "
-                         + characters[p2Team[i]].name;
-        drawTextShadow(line, 14, sf::Color(200, 200, 200), 60.f, 420.f + i * 22.f);
-    }
-
-    // Botones
-    sf::RectangleShape btnJ(sf::Vector2f(130.f, 45.f));
+    // Botón central inferior: JUGAR (Verde)
+    sf::RectangleShape btnJ(sf::Vector2f(160.f, 50.f));
     btnJ.setFillColor(sf::Color(0, 160, 0));
     btnJ.setOutlineColor(sf::Color::White);
     btnJ.setOutlineThickness(2.f);
-    btnJ.setPosition(250.f, 525.f);
+    btnJ.setPosition(220.f, 530.f);
     window.draw(btnJ);
-    drawTextShadow("JUGAR", 20, sf::Color::White, 281.f, 534.f, sf::Text::Bold);
+    drawTextShadow("JUGAR", 22, sf::Color::White, 255.f, 540.f, sf::Text::Bold);
 
-    sf::RectangleShape btnV(sf::Vector2f(130.f, 45.f));
+    // Botón central inferior: VOLVER (Rojo)
+    sf::RectangleShape btnV(sf::Vector2f(160.f, 50.f));
     btnV.setFillColor(sf::Color(160, 0, 0));
     btnV.setOutlineColor(sf::Color::White);
     btnV.setOutlineThickness(2.f);
-    btnV.setPosition(420.f, 525.f);
+    btnV.setPosition(420.f, 530.f);
     window.draw(btnV);
-    drawTextShadow("VOLVER", 20, sf::Color::White, 446.f, 534.f, sf::Text::Bold);
+    drawTextShadow("VOLVER", 22, sf::Color::White, 450.f, 540.f, sf::Text::Bold);
 
     window.display();
 }
@@ -654,7 +578,6 @@ void CharacterSelect::drawStageSelect()
 // ── render ────────────────────────────────────────────────────────────────────
 void CharacterSelect::render()
 {
-    // Tabla del draft de orden: quién elige y qué ronda asigna en cada sub-turno
     static const bool draftIsJ1[6] = { true,  false, false, true,  true,  false };
     static const int  draftSlot[6] = { 0,     0,     1,     1,     2,     2     };
 
