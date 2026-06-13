@@ -89,14 +89,18 @@ static const ScaleInfo SCALE_TABLE[6] = {
 };
 
 // ── Posiciones estilo Pokémon clásico ─────────────────────────────────────────
+// ¡MODIFICADO!: Recalculamos 'ex' (coordenada X del Jugador 2)
+// Al espejar (-X scale), el personaje se dibuja HACIA LA IZQUIERDA del origen.
+// Por lo tanto, movemos el origen de los enemigos (coordenada ex) a la derecha
+// del escenario para que al espejarse queden centrados.
 struct PosInfo { float px, py, ex, ey; };
 static const PosInfo POS_TABLE[6] = {
-    {  50.f, 370.f,   470.f,  120.f },
-    {  50.f, 360.f,   470.f,  110.f },
-    {  50.f, 360.f,   470.f,  110.f },
-    {  60.f, 410.f,   470.f,  110.f },
-    {  30.f, 370.f,   440.f,  130.f },
-    {  50.f, 360.f,   470.f,  110.f },
+    {  50.f, 370.f,   670.f,  120.f },  // J2 (Exdarktyranomon) movido ex 470->670
+    {  50.f, 360.f,   630.f,  110.f },  // J2 (BeelStarmon)     movido ex 470->630
+    {  50.f, 360.f,   630.f,  110.f },  // Bioquetzalmon
+    {  60.f, 410.f,   630.f,  110.f },  // Jesmon
+    {  30.f, 370.f,   700.f,  130.f },  // Sleipmon
+    {  50.f, 360.f,   630.f,  110.f },  // Magnamon
 };
 
 // ── buildCharacter ────────────────────────────────────────────────────────────
@@ -118,12 +122,18 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 
     if (isPlayer)
     {
+        // Jugador 1 (abajo-izquierda) mira hacia la derecha (escala normal)
         p.setScale(s.scalePlayer, s.scalePlayer);
         p.setPosition(pos.px, pos.py);
     }
     else
     {
         p.setScale(s.scaleEnemy, s.scaleEnemy);
+        // ¡MEJORA!: Aplicamos Efecto ESPEJO (scaleX negativa) al Jugador 2
+        // Al poner la escala en X como negativa (-s.scaleEnemy), SFML
+        // invierte el sprite horizontalmente, haciendo que apunte hacia la izquierda.
+        p.setScale(-s.scaleEnemy, s.scaleEnemy);
+        // Usamos la nueva posición ex corregida para compensar el giro
         p.setPosition(pos.ex, pos.ey);
     }
 
