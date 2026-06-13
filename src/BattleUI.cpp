@@ -3,16 +3,37 @@
 #include <iostream>
 
 // ── Colores ───────────────────────────────────────────────────────────────────
-const sf::Color BattleUI::P1_BTN_ACTIVE   = sf::Color(50,  80,  160);  // azul J1 activo
-const sf::Color BattleUI::P1_BTN_DISABLED = sf::Color(30,  45,  80);   // azul J1 sin energía
-const sf::Color BattleUI::P2_BTN_ACTIVE   = sf::Color(140, 40,  40);   // rojo J2 activo
-const sf::Color BattleUI::P2_BTN_DISABLED = sf::Color(70,  25,  25);   // rojo J2 sin energía
-const sf::Color BattleUI::BTN_NO_ENERGY   = sf::Color(45,  45,  45);   // gris genérico
+const sf::Color BattleUI::P1_BTN_ACTIVE   = sf::Color(50,  80,  160);
+const sf::Color BattleUI::P1_BTN_DISABLED = sf::Color(30,  45,  80);
+const sf::Color BattleUI::P2_BTN_ACTIVE   = sf::Color(140, 40,  40);
+const sf::Color BattleUI::P2_BTN_DISABLED = sf::Color(70,  25,  25);
+const sf::Color BattleUI::BTN_NO_ENERGY   = sf::Color(45,  45,  45);
+
+// ── Constantes de layout del HUD ─────────────────────────────────────────────
+static constexpr float HUD_SCALE      = 0.55f;
+static constexpr float IMG_W          = 691.f;
+static constexpr float IMG_H          = 185.f;
+
+// Offsets CORREGIDOS dentro del sprite HUD (para que la barra verde NO se salga)
+// Valores más precisos basados en la imagen original:
+// - El rectángulo negro del HP comienza en x≈163, y≈82, ancho≈517, alto≈21
+static constexpr float HP_OFF_X       = 163.f * HUD_SCALE;   // 89.7
+static constexpr float HP_OFF_Y       =  82.f * HUD_SCALE;   // 45.1
+static constexpr float HP_MAX_W       = 517.f * HUD_SCALE;   // 284.4
+static constexpr float HP_HEIGHT      =  21.f * HUD_SCALE;   // 11.6
+
+// Offsets para las celdas de energía
+static constexpr float EN_OFF_X       = 226.f * HUD_SCALE;   // 124.3
+static constexpr float EN_OFF_Y       = 136.f * HUD_SCALE;   // 74.8
+static constexpr float EN_CELL_W      =  24.f * HUD_SCALE;   // 13.2
+static constexpr float EN_GAP         =   5.f * HUD_SCALE;   // 2.8
+static constexpr float EN_CELL_H      =  14.f * HUD_SCALE;   // 7.7
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 BattleUI::BattleUI(const sf::Vector2u& windowSize)
     : winSize(windowSize), player(nullptr), enemy(nullptr), activeIsP1(true)
 {
+    // Cargar fuente
     if (!font.loadFromFile("assets/fonts/arial.ttf"))
     {
         std::vector<std::string> fallbacks = {
@@ -23,38 +44,53 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
             if (font.loadFromFile(p)) break;
     }
 
-    // ── Barra HP Jugador 1 (abajo-izquierda) ─────────────────────────────────
-    // Fondo semi-transparente con marco
-    playerHpBack.setSize({220.f, 20.f});
-    playerHpBack.setFillColor(sf::Color(30, 30, 30, 200));
-    playerHpBack.setOutlineThickness(2.f);
-    playerHpBack.setOutlineColor(sf::Color(100, 100, 100));
-    playerHpBack.setPosition(20.f, 340.f);
+    // ── HUD Jugador 1 (ARRIBA-IZQUIERDA) ──────────────────────────────────────
+    if (!playerHudTexture.loadFromFile("assets/images/barra_vida_jugador_1.png"))
+        std::cerr << "[Warning] No se encontro: assets/images/barra_vida_jugador_1.png\n";
 
-    // Barra de color (Más chica e incrustada +2px)
-    playerHpFront.setSize({216.f, 16.f});
+    playerHudSprite.setTexture(playerHudTexture);
+    playerHudSprite.setScale(HUD_SCALE, HUD_SCALE);
+
+    // Posición: ARRIBA-IZQUIERDA
+    const float p1HudX = 10.f;
+    const float p1HudY = 8.f;
+    playerHudSprite.setPosition(p1HudX, p1HudY);
+
+    // Barra HP de J1 - AHORA CON LÍMITES (clip) para que no se salga
+    playerHpFront.setSize({HP_MAX_W, HP_HEIGHT});
     playerHpFront.setFillColor(sf::Color(50, 200, 50));
-    playerHpFront.setPosition(22.f, 342.f);
+    playerHpFront.setPosition(p1HudX + HP_OFF_X, p1HudY + HP_OFF_Y);
 
-    // ── Barra HP Jugador 2 (arriba-derecha) ───────────────────────────────────
-    // Fondo semi-transparente con marco
-    enemyHpBack.setSize({220.f, 20.f});
-    enemyHpBack.setFillColor(sf::Color(30, 30, 30, 200));
-    enemyHpBack.setOutlineThickness(2.f);
-    enemyHpBack.setOutlineColor(sf::Color(100, 100, 100));
-    enemyHpBack.setPosition(winSize.x - 240.f, 20.f);
+    // Celdas de energía de J1
+    buildEnergyBar(playerEnergyCells,
+                   p1HudX + EN_OFF_X,
+                   p1HudY + EN_OFF_Y,
+                   sf::Color(0, 200, 255));
 
-    // Barra de color (Más chica e incrustada +2px)
-    enemyHpFront.setSize({216.f, 16.f});
+    // ── HUD Jugador 2 (ARRIBA-DERECHA) ────────────────────────────────────────
+    if (!enemyHudTexture.loadFromFile("assets/images/barra_vida_jugador_2.png"))
+        std::cerr << "[Warning] No se encontro: assets/images/barra_vida_jugador_2.png\n";
+
+    enemyHudSprite.setTexture(enemyHudTexture);
+    enemyHudSprite.setScale(HUD_SCALE, HUD_SCALE);
+
+    // Posición: ARRIBA-DERECHA
+    const float p2HudX = static_cast<float>(winSize.x) - IMG_W * HUD_SCALE - 10.f;
+    const float p2HudY = 8.f;
+    enemyHudSprite.setPosition(p2HudX, p2HudY);
+
+    // Barra HP de J2
+    enemyHpFront.setSize({HP_MAX_W, HP_HEIGHT});
     enemyHpFront.setFillColor(sf::Color(50, 200, 50));
-    enemyHpFront.setPosition(winSize.x - 238.f, 22.f);
+    enemyHpFront.setPosition(p2HudX + HP_OFF_X, p2HudY + HP_OFF_Y);
 
-    // ── Barras de energía ─────────────────────────────────────────────────────
-    // Ajustadas un poco en Y para no encimarse con el nuevo marco
-    buildEnergyBar(playerEnergyCells, 20.f,              368.f, sf::Color(0, 200, 255));
-    buildEnergyBar(enemyEnergyCells,  winSize.x - 240.f, 48.f,  sf::Color(255, 180, 0));
+    // Celdas de energía de J2
+    buildEnergyBar(enemyEnergyCells,
+                   p2HudX + EN_OFF_X,
+                   p2HudY + EN_OFF_Y,
+                   sf::Color(255, 180, 0));
 
-    // ── Panel de botones (abajo-derecha, igual posición que antes) ────────────
+    // ── Panel de botones (abajo-derecha) ──────────────────────────────────────
     const float btnW = 220.f, btnH = 40.f;
     moveButtons.resize(4);
     moveTexts.resize(4);
@@ -62,8 +98,8 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
 
     for (int i = 0; i < 4; ++i)
     {
-        float x = winSize.x - btnW - 20.f;
-        float y = winSize.y - (4 - i) * (btnH + 8.f) - 20.f;
+        float x = static_cast<float>(winSize.x) - btnW - 20.f;
+        float y = static_cast<float>(winSize.y) - (4 - i) * (btnH + 8.f) - 20.f;
 
         moveButtons[i].setSize({btnW, btnH});
         moveButtons[i].setFillColor(P1_BTN_ACTIVE);
@@ -83,8 +119,8 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
     }
 
     // ── Etiqueta de turno (encima del panel) ──────────────────────────────────
-    float labelX = winSize.x - btnW - 20.f;
-    float labelY = winSize.y - 4 * (btnH + 8.f) - 44.f;
+    float labelX = static_cast<float>(winSize.x) - btnW - 20.f;
+    float labelY = static_cast<float>(winSize.y) - 4.f * (btnH + 8.f) - 44.f;
     turnLabel.setFont(font);
     turnLabel.setCharacterSize(15);
     turnLabel.setStyle(sf::Text::Bold);
@@ -98,14 +134,13 @@ void BattleUI::buildEnergyBar(std::vector<sf::RectangleShape>& cells,
                                float x, float y, sf::Color /*activeColor*/)
 {
     cells.resize(10);
-    const float cellW = 18.f, cellH = 10.f, gap = 3.f;
     for (int i = 0; i < 10; ++i)
     {
-        cells[i].setSize({cellW, cellH});
-        cells[i].setPosition(x + i * (cellW + gap), y);
-        cells[i].setFillColor(sf::Color(60, 60, 60));
-        cells[i].setOutlineColor(sf::Color(100, 100, 100));
-        cells[i].setOutlineThickness(1.f);
+        cells[i].setSize({EN_CELL_W, EN_CELL_H});
+        cells[i].setPosition(x + i * (EN_CELL_W + EN_GAP), y);
+        cells[i].setFillColor(sf::Color(40, 40, 40));
+        cells[i].setOutlineColor(sf::Color(80, 80, 80));
+        cells[i].setOutlineThickness(0.f);
     }
 }
 
@@ -125,14 +160,12 @@ void BattleUI::refreshButtons()
 {
     Pokemonster* current = activeIsP1 ? player : enemy;
 
-    // Colores base del jugador activo
     sf::Color btnActive   = activeIsP1 ? P1_BTN_ACTIVE   : P2_BTN_ACTIVE;
     sf::Color btnDisabled = activeIsP1 ? P1_BTN_DISABLED  : P2_BTN_DISABLED;
     sf::Color outActive   = activeIsP1 ? sf::Color(120, 140, 220) : sf::Color(220, 100, 100);
     sf::Color outDisabled = activeIsP1 ? sf::Color(50, 60, 100)   : sf::Color(100, 50, 50);
     sf::Color costColor   = activeIsP1 ? sf::Color(0, 220, 255)   : sf::Color(255, 180, 60);
 
-    // Etiqueta de turno
     if (activeIsP1)
     {
         turnLabel.setString("TURNO: Jugador 1");
@@ -165,7 +198,6 @@ void BattleUI::refreshButtons()
 // ── updateMoveButtons: llamado desde Game al inicializar ──────────────────────
 void BattleUI::updateMoveButtons(Pokemonster* pokemon, bool isPlayer1)
 {
-    // Solo actualiza el panel si corresponde al jugador activo actualmente
     if (!pokemon) return;
     if (isPlayer1 == activeIsP1)
         refreshButtons();
@@ -179,15 +211,17 @@ void BattleUI::update()
     {
         float ratio = (player->getHPMax() > 0)
             ? static_cast<float>(player->getHP()) / player->getHPMax() : 0.f;
-        
-        // Ajustamos al nuevo tamaño interior (216px)
-        playerHpFront.setSize({216.f * ratio, 16.f});
-        
-        if      (ratio > 0.5f) playerHpFront.setFillColor(sf::Color(50, 200, 50));  // Verde brillante
-        else if (ratio > 0.2f) playerHpFront.setFillColor(sf::Color(220, 200, 50)); // Amarillo
-        else                   playerHpFront.setFillColor(sf::Color(220, 50, 50));  // Rojo
 
-        // Energía J1
+        // LIMITAR el ancho máximo para que NO sobrepase el rectángulo negro
+        float currentWidth = HP_MAX_W * ratio;
+        if (currentWidth > HP_MAX_W) currentWidth = HP_MAX_W;
+        playerHpFront.setSize({currentWidth, HP_HEIGHT});
+
+        // Cambiar color según la vida restante
+        if      (ratio > 0.5f) playerHpFront.setFillColor(sf::Color(50, 200, 50));
+        else if (ratio > 0.2f) playerHpFront.setFillColor(sf::Color(220, 200, 50));
+        else                   playerHpFront.setFillColor(sf::Color(220, 50, 50));
+
         int e = player->getEnergy();
         sf::Color c1(0, 200, 255);
         for (int i = 0; i < 10; ++i)
@@ -199,43 +233,46 @@ void BattleUI::update()
     {
         float ratio = (enemy->getHPMax() > 0)
             ? static_cast<float>(enemy->getHP()) / enemy->getHPMax() : 0.f;
-            
-        // Ajustamos al nuevo tamaño interior (216px)
-        enemyHpFront.setSize({216.f * ratio, 16.f});
-        
-        if      (ratio > 0.5f) enemyHpFront.setFillColor(sf::Color(50, 200, 50));  // Verde brillante
-        else if (ratio > 0.2f) enemyHpFront.setFillColor(sf::Color(220, 200, 50)); // Amarillo
-        else                   enemyHpFront.setFillColor(sf::Color(220, 50, 50));  // Rojo
 
-        // Energía J2
+        float currentWidth = HP_MAX_W * ratio;
+        if (currentWidth > HP_MAX_W) currentWidth = HP_MAX_W;
+        enemyHpFront.setSize({currentWidth, HP_HEIGHT});
+
+        if      (ratio > 0.5f) enemyHpFront.setFillColor(sf::Color(50, 200, 50));
+        else if (ratio > 0.2f) enemyHpFront.setFillColor(sf::Color(220, 200, 50));
+        else                   enemyHpFront.setFillColor(sf::Color(220, 50, 50));
+
         int e = enemy->getEnergy();
         sf::Color c2(255, 180, 0);
         for (int i = 0; i < 10; ++i)
             enemyEnergyCells[i].setFillColor(i < e ? c2 : sf::Color(40, 40, 40));
     }
 
-    // ── Actualizar colores de botones si cambia la energía disponible ─────────
     refreshButtons();
 }
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
 void BattleUI::draw(sf::RenderTarget& target)
 {
-    // HP
-    target.draw(playerHpBack);
+    // IMPORTANTE: Cambiar el orden de dibujo para que la barra HP quede DENTRO del marco
+    
+    // 1. Dibujar el SPRITE HUD primero (el marco)
+    target.draw(playerHudSprite);
+    target.draw(enemyHudSprite);
+    
+    // 2. Luego dibujar las barras HP ENCIMA (pero dentro del marco)
+    //    Esto asegura que no se "salgan" visualmente
     target.draw(playerHpFront);
-    target.draw(enemyHpBack);
     target.draw(enemyHpFront);
-
-    // Energía
+    
+    // 3. Celdas de energía
     for (auto& c : playerEnergyCells) target.draw(c);
     for (auto& c : enemyEnergyCells)  target.draw(c);
-
-    // Etiqueta de turno
+    
+    // 4. Etiqueta de turno y panel de botones
     if (font.getInfo().family.size() > 0)
         target.draw(turnLabel);
 
-    // Panel de botones
     for (size_t i = 0; i < moveButtons.size(); ++i)
     {
         target.draw(moveButtons[i]);
@@ -248,10 +285,8 @@ void BattleUI::draw(sf::RenderTarget& target)
 }
 
 // ── handleMouseClick ──────────────────────────────────────────────────────────
-// Solo detecta clicks si es el turno del jugador correcto
 int BattleUI::handleMouseClick(sf::Vector2i mousePos, bool isPlayer1Turn)
 {
-    // Si el panel no pertenece al jugador que clickeó, ignorar
     if (isPlayer1Turn != activeIsP1) return -1;
 
     sf::Vector2f m(static_cast<float>(mousePos.x),
