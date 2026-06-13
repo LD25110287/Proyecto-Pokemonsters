@@ -3,6 +3,12 @@
 #include <iostream>
 
 // ── Tabla de los 6 personajes ─────────────────────────────────────────────────
+// El "power" ahora es un PORCENTAJE del HP máximo del objetivo:
+//   Habilidad 1 (0E): power=6  → ~6%  del HP máximo (rango 5-8%)
+//   Habilidad 2 (2E): power=15 → ~15% del HP máximo
+//   Habilidad 3 (3E): power=25 → ~25% del HP máximo
+//   Habilidad 4 (5E): power=40 → ~40% del HP máximo
+// La fórmula en Pokemonster::attack() convierte estos % a daño real.
 struct CharInfo
 {
     const char* name;
@@ -18,55 +24,55 @@ static const CharInfo CHAR_TABLE[6] = {
     {   // 0: Exdarktyranomon
         "Exdarktyranomon", "assets/images/1.png", 50, 50, 500, 22, 8,
         {
-            {"Frenesi Viral",    14, MoveType::Normal, 0, 9, 1},
-            {"Cola de Hierro",   17, MoveType::Normal, 1, 9, 2},
-            {"Explosion Fuego",  21, MoveType::Fire,   2, 9, 3},
-            {"Mar de Llamas",    26, MoveType::Fire,   3, 9, 5}
+            {"Frenesi Viral",    6,  MoveType::Normal, 0, 9, 0},  // gratis, daño bajo
+            {"Cola de Hierro",   15, MoveType::Normal, 1, 9, 2},
+            {"Explosion Fuego",  25, MoveType::Fire,   2, 9, 3},
+            {"Mar de Llamas",    40, MoveType::Fire,   3, 9, 5}
         }
     },
     {   // 1: BeelStarmon
         "BeelStarmon", "assets/images/2.png", 100, 100, 475, 20, 6,
         {
-            {"Gatillo Rapido",    12, MoveType::Normal, 0, 9, 1},
-            {"Garra Doble",       17, MoveType::Normal, 1, 9, 2},
-            {"Huracan de Plomo",  20, MoveType::Normal, 2, 9, 3},
-            {"Bala Mosca",        24, MoveType::Normal, 3, 9, 5}
+            {"Gatillo Rapido",    6,  MoveType::Normal, 0, 9, 0},
+            {"Garra Doble",       15, MoveType::Normal, 1, 9, 2},
+            {"Huracan de Plomo",  25, MoveType::Normal, 2, 9, 3},
+            {"Bala Mosca",        40, MoveType::Normal, 3, 9, 5}
         }
     },
     {   // 2: Bioquetzalmon
         "Bioquetzalmon", "assets/images/3.png", 100, 100, 450, 18, 10,
         {
-            {"Blindaje Biorganico",  11, MoveType::Normal,   0, 8, 1},
-            {"Onda Congelante",      17, MoveType::Water,    1, 8, 2},
-            {"Rayo Fosil",           20, MoveType::Electric, 2, 8, 3},
-            {"Vuelo Serpiente",      24, MoveType::Normal,   3, 8, 4}
+            {"Blindaje Biorganico",  6,  MoveType::Normal,   0, 8, 0},
+            {"Onda Congelante",      15, MoveType::Water,    1, 8, 2},
+            {"Rayo Fosil",           25, MoveType::Electric, 2, 8, 3},
+            {"Vuelo Serpiente",      40, MoveType::Normal,   3, 8, 4}
         }
     },
     {   // 3: Jesmon
         "Jesmon", "assets/images/4.png", 100, 100, 525, 25, 7,
         {
-            {"OS Generics",          12, MoveType::Normal, 0, 9, 1},
-            {"Juicio de la Espada",  18, MoveType::Normal, 1, 9, 2},
-            {"Weltgeist",            23, MoveType::Normal, 2, 9, 4},
-            {"Uno Para Todos",       27, MoveType::Normal, 3, 9, 5}
+            {"OS Generics",          6,  MoveType::Normal, 0, 9, 0},
+            {"Juicio de la Espada",  15, MoveType::Normal, 1, 9, 2},
+            {"Weltgeist",            25, MoveType::Normal, 2, 9, 3},
+            {"Uno Para Todos",       40, MoveType::Normal, 3, 9, 5}
         }
     },
     {   // 4: Sleipmon
         "Sleipmon", "assets/images/5.png", 150, 80, 550, 19, 12,
         {
-            {"Armadura Roja",    11, MoveType::Normal,   0, 9, 1},
-            {"Aliento de Odin",  17, MoveType::Normal,   1, 9, 2},
-            {"Disparo Tactico",  20, MoveType::Normal,   2, 9, 3},
-            {"Bifrost",          26, MoveType::Electric, 3, 9, 5}
+            {"Armadura Roja",    6,  MoveType::Normal,   0, 9, 0},
+            {"Aliento de Odin",  15, MoveType::Normal,   1, 9, 2},
+            {"Disparo Tactico",  25, MoveType::Normal,   2, 9, 3},
+            {"Bifrost",          40, MoveType::Electric, 3, 9, 5}
         }
     },
     {   // 5: Magnamon
         "Magnamon", "assets/images/6.png", 100, 100, 490, 23, 9,
         {
-            {"Escudo Milagros",       12, MoveType::Normal,   0, 14, 1},
-            {"Patada Magnum",         17, MoveType::Normal,   1, 14, 2},
-            {"Disparo de Plasma",     21, MoveType::Electric, 2, 14, 3},
-            {"Tormenta Solar Dorada", 26, MoveType::Normal,   3, 14, 5}
+            {"Escudo Milagros",       6,  MoveType::Normal,   0, 14, 0},
+            {"Patada Magnum",         15, MoveType::Normal,   1, 14, 2},
+            {"Disparo de Plasma",     25, MoveType::Electric, 2, 14, 3},
+            {"Tormenta Solar Dorada", 40, MoveType::Normal,   3, 14, 5}
         }
     }
 };
@@ -128,7 +134,8 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 Game::Game(int p1Index, int p2Index, int bgIndex)
     : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
     , isRunning(true)
-    , currentTurn(TurnState::PLAYER1_TURN)   // J1 empieza
+    , winner(0)
+    , currentTurn(TurnState::PLAYER1_TURN)
     , waitingForInput(true)
     , animationPlaying(false)
     , delayScheduled(false)
@@ -139,7 +146,7 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
     window.setFramerateLimit(60);
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    // ── Fondo de batalla ──────────────────────────────────────────────────────
+    // Fondo aleatorio de batalla
     const std::string BG_PATHS[3] = {
         "assets/images/fondo_batalla_campo.png",
         "assets/images/fondo_batalla_red_crystal.png",
@@ -161,7 +168,7 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
     battleUI.setEnemyPokemon(&enemy);
     battleUI.updateMoveButtons(&player, true);
     battleUI.updateMoveButtons(&enemy,  false);
-    battleUI.setActivePlayer(true);   // J1 comienza
+    battleUI.setActivePlayer(true);
     battleUI.update();
 }
 
@@ -182,11 +189,9 @@ void Game::run()
                 event.key.code == sf::Keyboard::Escape)
             { window.close(); isRunning = false; }
 
-            // ── Clicks ────────────────────────────────────────────────────────
             if (event.type == sf::Event::MouseButtonPressed &&
                 event.mouseButton.button == sf::Mouse::Left)
             {
-                // Solo procesar si estamos esperando input y no hay animación
                 if (!waitingForInput || animationPlaying || delayScheduled)
                     continue;
 
@@ -194,11 +199,10 @@ void Game::run()
 
                 if (currentTurn == TurnState::PLAYER1_TURN)
                 {
-                    // J1 ataca → sus botones están a la DERECHA
                     int moveIndex = battleUI.handleMouseClick(mp, true);
                     if (moveIndex >= 0)
                     {
-                        player.attack(enemy, moveIndex);   // J1 ataca a J2
+                        player.attack(enemy, moveIndex);
                         animationPlaying = true;
                         waitingForInput  = false;
                         delayScheduled   = true;
@@ -207,11 +211,10 @@ void Game::run()
                 }
                 else if (currentTurn == TurnState::PLAYER2_TURN)
                 {
-                    // J2 ataca → sus botones están a la IZQUIERDA
                     int moveIndex = battleUI.handleMouseClick(mp, false);
                     if (moveIndex >= 0)
                     {
-                        enemy.attack(player, moveIndex);   // J2 ataca a J1
+                        enemy.attack(player, moveIndex);
                         animationPlaying = true;
                         waitingForInput  = false;
                         delayScheduled   = true;
@@ -233,38 +236,43 @@ void Game::update()
     player.updateAnimation();
     enemy.updateAnimation();
 
-    // Apagar flag de animación cuando ambos terminaron
     if (animationPlaying && !player.isAnimating() && !enemy.isAnimating())
         animationPlaying = false;
 
-    // Esperar 600ms después del ataque antes de cambiar de turno
     if (delayScheduled && !animationPlaying &&
         animDelayClock.getElapsedTime().asMilliseconds() >= 600)
     {
         delayScheduled = false;
 
-        // Ambos ganan 1 energía al final de cada turno
+        // +1 energía a ambos al final de cada turno (habilidad 1 es gratis
+        // así que la energía sube naturalmente para las habilidades caras)
         player.addEnergy(1);
         enemy.addEnergy(1);
 
-        // Verificar si alguien murió antes de cambiar turno
         if (player.isFainted() || enemy.isFainted())
         {
+            // Determinar ganador: si el jugador (J1) está ko, ganó J2 y viceversa
+            if (player.isFainted() && !enemy.isFainted())
+                winner = 2;
+            else if (enemy.isFainted() && !player.isFainted())
+                winner = 1;
+            else
+                winner = 0;  // empate (ambos ko al mismo tiempo)
+
             currentTurn = TurnState::BATTLE_OVER;
             isRunning   = false;
             return;
         }
 
-        // Cambiar turno
         if (currentTurn == TurnState::PLAYER1_TURN)
         {
             currentTurn = TurnState::PLAYER2_TURN;
-            battleUI.setActivePlayer(false);   // ahora es turno de J2
+            battleUI.setActivePlayer(false);
         }
         else
         {
             currentTurn = TurnState::PLAYER1_TURN;
-            battleUI.setActivePlayer(true);    // ahora es turno de J1
+            battleUI.setActivePlayer(true);
         }
 
         waitingForInput = true;
@@ -278,11 +286,8 @@ void Game::render()
 {
     window.clear(sf::Color(30, 30, 50));
     window.draw(battleBg);
-
-    // Enemigo (J2) al fondo, jugador (J1) encima
     window.draw(enemy);
     window.draw(player);
-
     battleUI.draw(window);
     window.display();
 }

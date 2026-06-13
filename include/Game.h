@@ -8,14 +8,15 @@
 #include <cstdlib>
 #include <ctime>
 
-struct CharacterData;
-
 class Game
 {
 public:
     Game(int p1Index, int p2Index, int bgIndex = -1);
     ~Game();
     void run();
+
+    // Devuelve quién ganó: 1 = Jugador 1, 2 = Jugador 2, 0 = sin resultado
+    int getWinner() const { return winner; }
 
 private:
     void handleEvents();
@@ -24,20 +25,18 @@ private:
 
     Pokemonster buildCharacter(int index, bool isPlayer);
 
-    // PLAYER1_TURN: espera click de J1 en sus botones (derecha)
-    // PLAYER2_TURN: espera click de J2 en sus botones (izquierda)
-    // BATTLE_OVER : alguien ganó
     enum class TurnState { PLAYER1_TURN, PLAYER2_TURN, BATTLE_OVER };
 
     sf::RenderWindow window;
     bool isRunning;
+    int  winner;   // 0 = sin ganador, 1 = J1 ganó, 2 = J2 ganó
 
     TurnState currentTurn;
-    bool      waitingForInput;    // true = esperando click del jugador activo
+    bool      waitingForInput;
     bool      animationPlaying;
 
-    sf::Clock animDelayClock;     // pausa entre turno y turno
-    bool      delayScheduled;     // esperando la pausa antes de cambiar turno
+    sf::Clock animDelayClock;
+    bool      delayScheduled;
 
     Pokemonster player;   // Jugador 1
     Pokemonster enemy;    // Jugador 2

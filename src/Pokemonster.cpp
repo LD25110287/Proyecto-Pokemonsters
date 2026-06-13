@@ -1,6 +1,7 @@
 #include "../include/Pokemonster.h"
 #include <algorithm>
 #include <iostream>
+#include <cstdlib>   // rand()
 
 const int Pokemonster::MAX_ENERGY;
 
@@ -40,11 +41,7 @@ void Pokemonster::setFrame(int row, int col)
                                      frameWidth, frameHeight));
 }
 
-// Aplica escala visual al sprite (no afecta lógica ni hitbox)
-void Pokemonster::setScale(float x, float y)
-{
-    sprite.setScale(x, y);
-}
+void Pokemonster::setScale(float x, float y) { sprite.setScale(x, y); }
 
 void Pokemonster::playAnimation(int row, int framesAmount)
 {
@@ -65,7 +62,6 @@ void Pokemonster::updateAnimation()
         currentFrame++;
         if (currentFrame >= maxFrames)
         {
-            // Aplicar daño diferido al final de la animación
             if (hasPendingDamage && damageTarget)
             {
                 damageTarget->takeDamage(pendingDamage);
@@ -95,6 +91,18 @@ bool Pokemonster::canUseMove(int moveIndex) const
 }
 
 // ── Ataque ────────────────────────────────────────────────────────────────────
+// FÓRMULA DE DAÑO con varianza aleatoria para habilidades 2, 3 y 4:
+//
+//   Habilidad 1 (0E) → power=6  → daño FIJO:    6% del HP máximo enemigo
+//   Habilidad 2 (2E) → power=15 → daño ALEATORIO: 9%  a 15% del HP máximo
+//   Habilidad 3 (3E) → power=25 → daño ALEATORIO: 18% a 25% del HP máximo
+//   Habilidad 4 (5E) → power=40 → daño ALEATORIO: 30% a 40% del HP máximo
+//
+// El mínimo de cada habilidad siempre supera el máximo de la anterior,
+// así que las habilidades caras SIEMPRE valen la pena, solo hay incertidumbre
+// en QUÉ TAN BIEN salen.
+//
+// Además se aplica un modificador de stats (±20%) basado en atk vs def.
 void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 {
     if (selectedMoveIndex < 0 || selectedMoveIndex >= (int)moves.size()) return;
@@ -102,14 +110,51 @@ void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
 
     const Move& m = moves[selectedMoveIndex];
 
+    // Descontar energía
     energy -= m.energyCost;
     if (energy < 0) energy = 0;
 
+    // Activar animación
     playAnimation(m.animationRow, m.frameCount);
 
-    int damage    = std::max(1, m.power + attackStat - target.getDefense());
-    pendingDamage = damage;
-    damageTarget  = &target;
+    // ── Rango de porcentaje según el índice de la habilidad ───────────────────
+    // power es el techo (máximo). El piso es ~60% del techo.
+    // Habilidad 1 (power=6)  → siempre 6%  (sin varianza, es el ataque básico)
+    // Habilidad 2 (power=15) → entre 9%  y 15%
+    // Habilidad 3 (power=25) → entre 18% y 25%
+    // Habilidad 4 (power=40) → entre 30% y 40%
+    float powerMin, powerMax;
+
+    if (selectedMoveIndex == 0)
+    {
+        // Habilidad 1: daño fijo, sin sorpresas
+        powerMin = static_cast<float>(m.power);
+        powerMax = static_cast<float>(m.power);
+    }
+    else
+    {
+        // Habilidades 2-4: mínimo = 60% del techo, máximo = techo
+        powerMax = static_cast<float>(m.power);
+        powerMin = powerMax * 0.60f;
+    }
+
+    // Porcentaje aleatorio entre min y max
+    float range      = powerMax - powerMin;
+    float randomPct  = powerMin + (range > 0.f
+                       ? (static_cast<float>(std::rand() % 1001) / 1000.f) * range
+                       : 0.f);
+
+    // Daño base = porcentaje del HP máximo del objetivo
+    float baseDamage = (randomPct / 100.f) * static_cast<float>(target.getHPMax());
+
+    // Modificador de stats: ±20% máximo según diferencia atk - def
+    float statDiff = static_cast<float>(attackStat - target.getDefense());
+    float statMod  = 1.0f + std::max(-0.20f, std::min(0.20f, statDiff / 50.f));
+
+    int damage = std::max(1, static_cast<int>(baseDamage * statMod));
+
+    pendingDamage    = damage;
+    damageTarget     = &target;
     hasPendingDamage = true;
 }
 
