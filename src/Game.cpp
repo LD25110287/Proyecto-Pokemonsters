@@ -135,7 +135,7 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 }
 
 // ── Constructor ───────────────────────────────────────────────────────────────
-Game::Game(int p1Index, int p2Index)
+Game::Game(int p1Index, int p2Index, int bgIndex)
     : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
     , isRunning(true)
     , currentTurn(TurnState::PLAYER_TURN)
@@ -148,6 +148,24 @@ Game::Game(int p1Index, int p2Index)
 {
     window.setFramerateLimit(60);
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    // ── Fondo de batalla ──────────────────────────────────────────────────────
+    const std::string BG_PATHS[3] = {
+        "assets/images/fondo_batalla_campo.png",
+        "assets/images/fondo_batalla_red_crystal.png",
+        "assets/images/fondo_batalla_arena.png"
+    };
+    if (bgIndex < 0 || bgIndex >= 3)
+        bgIndex = std::rand() % 3;
+    if (battleBgTexture.loadFromFile(BG_PATHS[bgIndex]))
+    {
+        battleBg.setTexture(battleBgTexture);
+        sf::Vector2u texSize = battleBgTexture.getSize();
+        battleBg.setScale(800.f / static_cast<float>(texSize.x),
+                          600.f / static_cast<float>(texSize.y));
+    }
+    else
+        std::cerr << "[Game] No se pudo cargar fondo: " << BG_PATHS[bgIndex] << "\n";
 
     battleUI.setPlayerPokemon(&player);
     battleUI.setEnemyPokemon(&enemy);
@@ -242,6 +260,9 @@ void Game::update()
 void Game::render()
 {
     window.clear(sf::Color(30, 30, 50));
+
+    // Fondo de batalla
+    window.draw(battleBg);
 
     // Enemigo primero (al fondo), jugador encima (primer plano)
     window.draw(enemy);

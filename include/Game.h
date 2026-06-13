@@ -14,8 +14,8 @@ struct CharacterData;
 class Game
 {
 public:
-    // Constructor que recibe los índices de personaje elegidos
-    Game(int p1Index, int p2Index);
+    // Constructor que recibe los índices de personaje y el fondo elegido (0-2)
+    Game(int p1Index, int p2Index, int bgIndex = -1);
     ~Game();
     void run();
 
@@ -43,6 +43,10 @@ private:
     Pokemonster enemy;
 
     BattleUI battleUI;
+
+    // Fondo de batalla
+    sf::Texture battleBgTexture;
+    sf::Sprite  battleBg;
 };
 
 #endif // GAME_H

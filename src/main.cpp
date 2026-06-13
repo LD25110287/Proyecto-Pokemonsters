@@ -18,8 +18,9 @@ int main()
     if (!selector.shouldLaunchBattle())
         return 0;
 
-    // 3. Batalla con los personajes elegidos
-    Game game(selector.getPlayer1Choice(), selector.getPlayer2Choice());
+    // 3. Batalla con los personajes y escenario elegidos
+    Game game(selector.getPlayer1Choice(), selector.getPlayer2Choice(),
+              selector.getSelectedStage());
     game.run();
 
     return 0;

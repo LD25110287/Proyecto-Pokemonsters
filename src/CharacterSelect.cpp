@@ -8,6 +8,8 @@ CharacterSelect::CharacterSelect()
     , p1Choice(-1)
     , p2Choice(-1)
     , launchBattle(false)
+    , selectedStage(-1)
+    , stageAnimDone(false)
 {
     window.setFramerateLimit(60);
 
@@ -42,6 +44,20 @@ void CharacterSelect::loadAssets()
         vsBgSprite.setTexture(vsBgTexture);
         sf::Vector2u sz = vsBgTexture.getSize();
         vsBgSprite.setScale(800.f / sz.x, 600.f / sz.y);
+    }
+
+    // Fondos de batalla (para pantalla de selección de escenario)
+    const std::string STAGE_PATHS[NUM_STAGES] = {
+        "assets/images/fondo_batalla_campo.png",
+        "assets/images/fondo_batalla_red_crystal.png",
+        "assets/images/fondo_batalla_arena.png"
+    };
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        if (!stageBgTextures[i].loadFromFile(STAGE_PATHS[i]))
+            std::cerr << "No se pudo cargar: " << STAGE_PATHS[i] << "\n";
+        else
+            stageBgSprites[i].setTexture(stageBgTextures[i]);
     }
 
     // Portraits
@@ -104,10 +120,22 @@ void CharacterSelect::handleEvents()
             else if (phase == Phase::CONFIRM)
             {
                 if (sf::FloatRect(250.f, 510.f, 130.f, 50.f).contains(static_cast<sf::Vector2f>(mp)))
-                { launchBattle = true; window.close(); }
-
+                {
+                    // Pasar a la pantalla de selección de escenario
+                    selectedStage  = -1;
+                    stageAnimDone  = false;
+                    phase          = Phase::STAGE_SELECT;
+                    stageAnimClock.restart();
+                }
                 else if (sf::FloatRect(420.f, 510.f, 130.f, 50.f).contains(static_cast<sf::Vector2f>(mp)))
                 { p1Choice = -1; p2Choice = -1; phase = Phase::PLAYER1; hoveredCard = -1; }
+            }
+
+            else if (phase == Phase::STAGE_SELECT)
+            {
+                // Solo permitir avanzar si la animación ya terminó
+                if (stageAnimDone)
+                { launchBattle = true; window.close(); }
             }
         }
     }
@@ -288,6 +316,134 @@ void CharacterSelect::drawConfirmScreen()
     window.display();
 }
 
+// ── Pantalla de selección de escenario ───────────────────────────────────────
+void CharacterSelect::drawStageSelect()
+{
+    // Fondo VS de base
+    if (vsBgTexture.getSize().x > 0)
+        window.draw(vsBgSprite);
+    else
+        window.clear(sf::Color(10, 10, 20));
+
+    // ── Título ────────────────────────────────────────────────────────────────
+    drawTextWithShadow(window, "Escenario de Batalla", font, 32,
+                       sf::Color(255, 215, 0),
+                       (800.f - 260.f) / 2.f, 18.f, sf::Text::Bold);
+
+    // ── Animación de ruleta ───────────────────────────────────────────────────
+    // Durante 2.5 s cambia rápido, los últimos 0.5 s se frena, luego queda fijo
+    float elapsed = stageAnimClock.getElapsedTime().asSeconds();
+
+    int  displayIndex;   // cuál mostrar "girando"
+    bool animating      = !stageAnimDone;
+
+    if (!stageAnimDone)
+    {
+        // Velocidad decrece con el tiempo: al inicio cambia cada 60ms, al final cada 300ms
+        float interval = 0.06f + (elapsed / 2.5f) * 0.24f;
+        displayIndex   = static_cast<int>(elapsed / interval) % NUM_STAGES;
+
+        if (elapsed >= 3.0f)
+        {
+            // Elegir el ganador aleatoriamente (solo una vez)
+            selectedStage = std::rand() % NUM_STAGES;
+            stageAnimDone = true;
+            displayIndex  = selectedStage;
+        }
+    }
+    else
+    {
+        displayIndex = selectedStage;
+    }
+
+    // ── Dibujar las 3 miniaturas ──────────────────────────────────────────────
+    // Centradas horizontalmente, la seleccionada/destacada es más grande
+    const float THUMB_W     = 200.f;
+    const float THUMB_H     = 120.f;
+    const float THUMB_W_SEL = 260.f;   // tamaño de la seleccionada
+    const float THUMB_H_SEL = 156.f;
+    const float TOTAL_Y     = 200.f;   // Y base de las miniaturas
+
+    // Calcular ancho total para centrar
+    // 2 pequeñas + 1 grande + gaps
+    float totalWidth = THUMB_W * 2.f + THUMB_W_SEL + 20.f * 2.f;
+    float startX     = (800.f - totalWidth) / 2.f;
+
+    float curX = startX;
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        bool isSelected = (i == displayIndex);
+        float w = isSelected ? THUMB_W_SEL : THUMB_W;
+        float h = isSelected ? THUMB_H_SEL : THUMB_H;
+        float y = TOTAL_Y + (isSelected ? 0.f : (THUMB_H_SEL - THUMB_H) / 2.f);
+
+        // Escalar sprite al tamaño de miniatura
+        if (stageBgTextures[i].getSize().x > 0)
+        {
+            sf::Vector2u sz = stageBgTextures[i].getSize();
+            stageBgSprites[i].setScale(w / sz.x, h / sz.y);
+            stageBgSprites[i].setPosition(curX, y);
+            window.draw(stageBgSprites[i]);
+        }
+
+        // Borde: dorado si está seleccionada, gris si no
+        sf::RectangleShape border(sf::Vector2f(w, h));
+        border.setPosition(curX, y);
+        border.setFillColor(sf::Color::Transparent);
+        if (isSelected)
+        {
+            border.setOutlineColor(sf::Color(255, 215, 0));
+            border.setOutlineThickness(4.f);
+        }
+        else
+        {
+            border.setOutlineColor(sf::Color(100, 100, 140));
+            border.setOutlineThickness(2.f);
+        }
+        window.draw(border);
+
+        curX += w + 20.f;
+    }
+
+    // ── Nombres de los escenarios ─────────────────────────────────────────────
+    const std::string STAGE_NAMES[NUM_STAGES] = { "Campo", "Cristal Rojo", "Arena" };
+    curX = startX;
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        bool  isSelected = (i == displayIndex);
+        float w          = isSelected ? THUMB_W_SEL : THUMB_W;
+        float nameY      = TOTAL_Y + THUMB_H_SEL + 10.f;
+
+        sf::Text nm(STAGE_NAMES[i], font, isSelected ? 18 : 14);
+        float nmX = curX + (w - nm.getLocalBounds().width) / 2.f;
+        drawTextWithShadow(window, STAGE_NAMES[i], font,
+                           isSelected ? 18 : 14,
+                           isSelected ? sf::Color(255, 215, 0) : sf::Color(180, 180, 180),
+                           nmX, nameY);
+        curX += w + 20.f;
+    }
+
+    // ── Mensaje inferior ──────────────────────────────────────────────────────
+    if (stageAnimDone)
+    {
+        const std::string STAGE_NAMES2[NUM_STAGES] = { "Campo", "Cristal Rojo", "Arena" };
+        std::string msg = "Escenario: " + STAGE_NAMES2[selectedStage] + "  |  Click para comenzar!";
+        sf::Text t(msg, font, 20);
+        float tx = (800.f - t.getLocalBounds().width) / 2.f;
+        drawTextWithShadow(window, msg, font, 20,
+                           sf::Color(100, 255, 100), tx, 430.f, sf::Text::Bold);
+    }
+    else
+    {
+        sf::Text t("Sorteando escenario...", font, 20);
+        float tx = (800.f - t.getLocalBounds().width) / 2.f;
+        drawTextWithShadow(window, "Sorteando escenario...", font, 20,
+                           sf::Color(200, 200, 255), tx, 430.f);
+    }
+
+    window.display();
+}
+
 void CharacterSelect::update() {}
 
 void CharacterSelect::render()
@@ -296,8 +452,10 @@ void CharacterSelect::render()
         drawGrid(hoveredCard, -1, "Jugador 1 - Elige tu personaje");
     else if (phase == Phase::PLAYER2)
         drawGrid(hoveredCard, p1Choice, "Jugador 2 - Elige tu personaje");
-    else
+    else if (phase == Phase::CONFIRM)
         drawConfirmScreen();
+    else
+        drawStageSelect();
 }
 
 void CharacterSelect::run()
