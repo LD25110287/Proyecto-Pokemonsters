@@ -2,6 +2,7 @@
 #define MENUSCREEN_H
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp> // ← Añadido para el soporte de audio y sf::Music
 #include <vector>
 #include <string>
 
@@ -17,7 +18,7 @@ private:
     {
         MAIN_MENU,
         CHARACTERS,
-        CHARACTER_DETAIL,  // ← pantalla de detalle de un personaje
+        CHARACTER_DETAIL,
         SETTINGS
     };
 
@@ -66,6 +67,17 @@ private:
     // Botones de la pantalla Characters (6 cards)
     std::vector<sf::RectangleShape> charCards;
     std::vector<sf::Text>           charCardTexts;
+
+    // ── Sistema de Audio y Configuración ──────────────────────────────────────
+    sf::Music          menuMusic;
+    int                volumeLevel;       // Nivel de volumen de 0 a 10
+    
+    sf::RectangleShape btnDecrease;       // Botón [-]
+    sf::RectangleShape btnIncrease;       // Botón [+]
+    sf::Text           txtDecrease;
+    sf::Text           txtIncrease;
+    sf::Text           txtVolumeValue;    // Muestra el número (ej: "5 / 10")
+    sf::Text           txtVolumeTitle;    // Etiqueta "Volumen Musica:"
 };
 
 #endif // MENUSCREEN_H
