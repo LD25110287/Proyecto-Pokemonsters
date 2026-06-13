@@ -96,7 +96,7 @@ static const PosInfo POS_TABLE[6] = {
     {  50.f, 370.f,   470.f,  120.f },  // 0: Exdarktyranomon
     {  50.f, 360.f,   470.f,  110.f },  // 1: BeelStarmon
     {  50.f, 360.f,   470.f,  110.f },  // 2: Bioquetzalmon
-    {  50.f, 360.f,   470.f,  110.f },  // 3: Jesmon
+    {  60.f, 410.f,   470.f,  110.f },  // 3: Jesmon
     {  30.f, 370.f,   440.f,  130.f },  // 4: Sleipmon (más ancho)
     {  50.f, 360.f,   470.f,  110.f },  // 5: Magnamon
 };
