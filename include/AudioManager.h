@@ -23,12 +23,20 @@ public:
     // Música de combate (en bucle): mientras dura la batalla.
     static void playBattleMusic();
 
+    // Ajusta el volumen de la música actual (0.0 a 100.0). Se conserva
+    // y se reaplica automáticamente al cambiar de pista.
+    static void setVolume(float volume);
+
+    // Devuelve el volumen actual (0.0 a 100.0)
+    static float getVolume();
+
     // Detiene cualquier música en reproducción.
     static void stopMusic();
 
 private:
     static sf::Music music;
     static Track     currentTrack;
+    static float     currentVolume;   // 0-100, persiste entre cambios de pista
 };
 
 #endif // AUDIOMANAGER_H

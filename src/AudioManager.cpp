@@ -3,7 +3,8 @@
 
 // ── Definición de miembros estáticos ─────────────────────────────────────────
 sf::Music           AudioManager::music;
-AudioManager::Track AudioManager::currentTrack = AudioManager::Track::NONE;
+AudioManager::Track AudioManager::currentTrack  = AudioManager::Track::NONE;
+float               AudioManager::currentVolume = 50.f;   // 50% por defecto
 
 // ── Intro (3 seg, una sola vez al iniciar la app) ────────────────────────────
 void AudioManager::playIntro()
@@ -16,6 +17,7 @@ void AudioManager::playIntro()
     }
 
     intro.setLoop(false);
+    intro.setVolume(currentVolume);
     intro.play();
 
     // Bloqueante: aún no hay ventana abierta, así que no afecta el render.
@@ -34,6 +36,7 @@ void AudioManager::playMenuMusic()
     if (music.openFromFile("assets/sounds/musica_menu.mp3"))
     {
         music.setLoop(true);
+        music.setVolume(currentVolume);
         music.play();
         currentTrack = Track::MENU;
     }
@@ -54,6 +57,7 @@ void AudioManager::playBattleMusic()
     if (music.openFromFile("assets/sounds/musica_fondo_combate.mp3"))
     {
         music.setLoop(true);
+        music.setVolume(currentVolume);
         music.play();
         currentTrack = Track::BATTLE;
     }
@@ -62,6 +66,21 @@ void AudioManager::playBattleMusic()
         std::cerr << "[Audio] No se pudo cargar 'musica_fondo_combate.mp3'\n";
         currentTrack = Track::NONE;
     }
+}
+
+// ── Volumen ───────────────────────────────────────────────────────────────────
+void AudioManager::setVolume(float volume)
+{
+    if (volume < 0.f)   volume = 0.f;
+    if (volume > 100.f) volume = 100.f;
+
+    currentVolume = volume;
+    music.setVolume(currentVolume);
+}
+
+float AudioManager::getVolume()
+{
+    return currentVolume;
 }
 
 // ── Detener música ────────────────────────────────────────────────────────────

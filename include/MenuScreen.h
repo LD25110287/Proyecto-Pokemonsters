@@ -2,7 +2,6 @@
 #define MENUSCREEN_H
 
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp> // ← Añadido para el soporte de audio y sf::Music
 #include <vector>
 #include <string>
 
@@ -68,10 +67,11 @@ private:
     std::vector<sf::RectangleShape> charCards;
     std::vector<sf::Text>           charCardTexts;
 
-    // ── Sistema de Audio y Configuración ──────────────────────────────────────
-    sf::Music          menuMusic;
+    // ── Configuración de Volumen ──────────────────────────────────────────────
+    // La música la maneja AudioManager (única instancia para toda la app).
+    // Aquí solo guardamos el valor en escala 0-10 para mostrarlo en la UI.
     int                volumeLevel;       // Nivel de volumen de 0 a 10
-    
+
     sf::RectangleShape btnDecrease;       // Botón [-]
     sf::RectangleShape btnIncrease;       // Botón [+]
     sf::Text           txtDecrease;
