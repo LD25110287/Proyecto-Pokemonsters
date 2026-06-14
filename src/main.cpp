@@ -1,13 +1,18 @@
 #include "../include/Game.h"
 #include "../include/MenuScreen.h"
 #include "../include/CharacterSelect.h"
+#include "../include/AudioManager.h"
 
 int main()
 {
+    // ── Sonido de introducción (3 seg, una sola vez) ─────────────────────────
+    AudioManager::playIntro();
+
     // Bucle principal: permite regresar al menú después de una partida
     while (true)
     {
         // ── 1. Menú principal ─────────────────────────────────────────────────
+        AudioManager::playMenuMusic();
         MenuScreen menu;
         menu.run();
 
@@ -15,6 +20,8 @@ int main()
             return 0;   // El jugador eligió Salir
 
         // ── 2. Selección de personajes (3 por jugador) ────────────────────────
+        // Misma música de menú (no se reinicia si ya estaba sonando)
+        AudioManager::playMenuMusic();
         CharacterSelect selector;
         selector.run();
 
@@ -29,27 +36,26 @@ int main()
         int p1Wins = 0;
         int p2Wins = 0;
 
+        // Música de combate: empieza antes de la primera ronda y continúa
+        // sonando sin interrupción entre rondas (currentTrack ya es BATTLE)
+        AudioManager::playBattleMusic();
+
         for (int round = 0; round < 3; ++round)
         {
-            // Si ya hay 2 victorias, la serie terminó antes
             if (p1Wins >= 2 || p2Wins >= 2)
                 break;
 
-            // Crear y correr la batalla de esta ronda
             Game game(p1Team[round], p2Team[round], stage);
             game.run();
 
-            // Registrar quién ganó esta ronda
             if (game.getWinner() == 1)
                 p1Wins++;
             else if (game.getWinner() == 2)
                 p2Wins++;
-
-            // El escenario puede cambiar entre rondas o mantenerse
-            // (actualmente se mantiene el mismo elegido)
         }
 
-        // La serie termina → vuelve al while(true) y regresa al menú
+        // La serie termina → vuelve al while(true) y AudioManager::playMenuMusic()
+        // cambiará de pista automáticamente al inicio de la siguiente vuelta.
 
     }   // fin while(true)
 
