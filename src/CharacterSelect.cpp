@@ -553,18 +553,9 @@ void CharacterSelect::drawConfirmScreen()
 
         drawPortrait(p1Team[i], cx1, cy1, 100.f, sf::Color::Transparent, 0.f);
 
-        // Nombre con ícono de atributo a su izquierda
         sf::Text n1(characters[p1Team[i]].name, font, 16);
         float nameX1 = cx1 - n1.getLocalBounds().width / 2.f;
         float nameY1 = cy1 + 55.f;
-
-        // Ícono a la izquierda del nombre
-        const float ICON_SIZE = 18.f;
-        drawAttributeIcon(CHAR_ATTRIBUTES[p1Team[i]],
-                          nameX1 - ICON_SIZE - 4.f,
-                          nameY1 + (n1.getLocalBounds().height - ICON_SIZE) / 2.f,
-                          ICON_SIZE);
-
         drawTextShadow(characters[p1Team[i]].name, 16, sf::Color::White, nameX1, nameY1);
 
         // ── J2 ────────────────────────────────────────────────────────────────
@@ -576,12 +567,6 @@ void CharacterSelect::drawConfirmScreen()
         sf::Text n2(characters[p2Team[i]].name, font, 16);
         float nameX2 = cx2 - n2.getLocalBounds().width / 2.f;
         float nameY2 = cy2 + 55.f;
-
-        drawAttributeIcon(CHAR_ATTRIBUTES[p2Team[i]],
-                          nameX2 - ICON_SIZE - 4.f,
-                          nameY2 + (n2.getLocalBounds().height - ICON_SIZE) / 2.f,
-                          ICON_SIZE);
-
         drawTextShadow(characters[p2Team[i]].name, 16, sf::Color::White, nameX2, nameY2);
     }
 

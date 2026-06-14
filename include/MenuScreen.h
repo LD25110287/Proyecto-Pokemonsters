@@ -59,25 +59,25 @@ private:
     int       hoveredButton;
     bool      launchGame;
 
-    // Personajes para la pantalla de detalle
     std::vector<CharEntry> chars;
-    int detailIndex; // cuál personaje se está mostrando (-1 = ninguno)
+    int detailIndex;
 
-    // Botones de la pantalla Characters (6 cards)
     std::vector<sf::RectangleShape> charCards;
     std::vector<sf::Text>           charCardTexts;
 
-    // ── Configuración de Volumen ──────────────────────────────────────────────
-    // La música la maneja AudioManager (única instancia para toda la app).
-    // Aquí solo guardamos el valor en escala 0-10 para mostrarlo en la UI.
-    int                volumeLevel;       // Nivel de volumen de 0 a 10
+    // ── Íconos de atributo ────────────────────────────────────────────────────
+    // 0 = Vacuna (Va), 1 = Virus (Vi), 2 = Data (Da)
+    sf::Texture attrTextures[3];
+    bool        attrLoaded[3] = { false, false, false };
 
-    sf::RectangleShape btnDecrease;       // Botón [-]
-    sf::RectangleShape btnIncrease;       // Botón [+]
+    // ── Configuración de Volumen ──────────────────────────────────────────────
+    int                volumeLevel;
+    sf::RectangleShape btnDecrease;
+    sf::RectangleShape btnIncrease;
     sf::Text           txtDecrease;
     sf::Text           txtIncrease;
-    sf::Text           txtVolumeValue;    // Muestra el número (ej: "5 / 10")
-    sf::Text           txtVolumeTitle;    // Etiqueta "Volumen Musica:"
+    sf::Text           txtVolumeValue;
+    sf::Text           txtVolumeTitle;
 };
 
 #endif // MENUSCREEN_H
