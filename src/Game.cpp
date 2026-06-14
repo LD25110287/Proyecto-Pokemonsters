@@ -77,6 +77,26 @@ static const CharInfo CHAR_TABLE[6] = {
     }
 };
 
+// ── Atributos por personaje: 1=Va,2=Vi,3=Va,4=Da,5=Va,6=Va ──────────────────
+static const Attribute ATTR_TABLE[6] = {
+    Attribute::Vacuna,  // 0: Exdarktyranomon
+    Attribute::Virus,   // 1: BeelStarmon
+    Attribute::Vacuna,  // 2: Bioquetzalmon
+    Attribute::Data,    // 3: Jesmon
+    Attribute::Vacuna,  // 4: Sleipmon
+    Attribute::Vacuna,  // 5: Magnamon
+};
+
+// ── Paths de portraits ────────────────────────────────────────────────────────
+static const char* PORTRAIT_PATHS[6] = {
+    "assets/images/champ_select_1.png",
+    "assets/images/champ_select_2.png",
+    "assets/images/champ_select_3.png",
+    "assets/images/champ_select_4.png",
+    "assets/images/champ_select_5.png",
+    "assets/images/champ_select_6.png",
+};
+
 // ── Escala visual por personaje ───────────────────────────────────────────────
 struct ScaleInfo { float scalePlayer; float scaleEnemy; };
 static const ScaleInfo SCALE_TABLE[6] = {
@@ -116,6 +136,7 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
 
     Pokemonster p(c.name, c.hp, c.atk, c.def, moves);
     p.loadSpriteSheet(c.spritePath, c.frameW, c.frameH);
+    p.setAttribute(ATTR_TABLE[index]);   // ← asignar atributo
 
     const ScaleInfo& s   = SCALE_TABLE[index];
     const PosInfo&   pos = POS_TABLE[index];
@@ -176,6 +197,9 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
 
     battleUI.setPlayerPokemon(&player);
     battleUI.setEnemyPokemon(&enemy);
+    battleUI.loadAttributeIcons();
+    battleUI.setPlayerAttribute(ATTR_TABLE[p1Index < 0 || p1Index > 5 ? 0 : p1Index]);
+    battleUI.setEnemyAttribute (ATTR_TABLE[p2Index < 0 || p2Index > 5 ? 0 : p2Index]);
     battleUI.updateMoveButtons(&player, true);
     battleUI.updateMoveButtons(&enemy,  false);
     battleUI.setActivePlayer(true);

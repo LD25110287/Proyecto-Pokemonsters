@@ -4,8 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
-
-class Pokemonster;
+#include "Pokemonster.h"  // necesario para Attribute
 
 class BattleUI
 {
@@ -24,6 +23,12 @@ public:
 
     // Cambia el panel al jugador activo (actualiza colores y textos)
     void setActivePlayer(bool isPlayer1Turn);
+
+    // Carga los íconos de atributo (llamado desde Game)
+    void loadAttributeIcons();
+    // Asigna el atributo de cada jugador para mostrarlo en HUD
+    void setPlayerAttribute(Attribute a) { p1Attribute = a; }
+    void setEnemyAttribute (Attribute a) { p2Attribute = a; }
 
 private:
     void buildEnergyBar(std::vector<sf::RectangleShape>& cells,
@@ -59,6 +64,11 @@ private:
     static const sf::Color P2_BTN_ACTIVE;
     static const sf::Color P2_BTN_DISABLED;
     static const sf::Color BTN_NO_ENERGY;
+
+    // ── Íconos de atributo ────────────────────────────────────────────────────
+    sf::Texture attrTexVa, attrTexVi, attrTexDa;
+    sf::Sprite  p1AttrSprite, p2AttrSprite;
+    Attribute   p1Attribute, p2Attribute;
 };
 
 #endif // BATTLEUI_H

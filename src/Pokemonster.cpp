@@ -10,7 +10,7 @@ Pokemonster::Pokemonster()
       frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
       pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
-      energy(3)
+      energy(3), attribute(Attribute::Vacuna)
 {}
 
 Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
@@ -20,7 +20,7 @@ Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
       frameWidth(0), frameHeight(0), currentFrame(0), currentRow(0),
       maxFrames(0), frameDuration(0.1f), isAttacking(false),
       pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
-      energy(3)
+      energy(3), attribute(Attribute::Vacuna)
 {}
 
 // ── Sprite ────────────────────────────────────────────────────────────────────
@@ -151,7 +151,19 @@ void Pokemonster::attack(Pokemonster& target, int selectedMoveIndex)
     float statDiff = static_cast<float>(attackStat - target.getDefense());
     float statMod  = 1.0f + std::max(-0.20f, std::min(0.20f, statDiff / 50.f));
 
-    int damage = std::max(1, static_cast<int>(baseDamage * statMod));
+    // ── Multiplicador de atributo ─────────────────────────────────────────────
+    // Vacuna > Virus > Data > Vacuna
+    // Si este personaje tiene ventaja: multiplicador aleatorio x1.2 a x1.5
+    float attrMod = 1.0f;
+    if (hasAdvantage(attribute, target.getAttribute()))
+    {
+        // Aleatorio entre 1.2 y 1.5
+        float t = static_cast<float>(std::rand() % 1001) / 1000.f; // 0.0 a 1.0
+        attrMod = 1.2f + t * 0.3f;  // 1.2 a 1.5
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    int damage = std::max(1, static_cast<int>(baseDamage * statMod * attrMod));
 
     pendingDamage    = damage;
     damageTarget     = &target;

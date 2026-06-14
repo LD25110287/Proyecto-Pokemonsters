@@ -6,6 +6,19 @@
 #include <vector>
 #include "Move.h"
 
+// ── Sistema de atributos ──────────────────────────────────────────────────────
+// Vacuna > Virus > Data > Vacuna
+enum class Attribute { Vacuna, Virus, Data };
+
+// Retorna true si 'attacker' tiene ventaja sobre 'defender'
+inline bool hasAdvantage(Attribute attacker, Attribute defender)
+{
+    return (attacker == Attribute::Vacuna && defender == Attribute::Virus)  ||
+           (attacker == Attribute::Virus  && defender == Attribute::Data)   ||
+           (attacker == Attribute::Data   && defender == Attribute::Vacuna);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 class Pokemonster : public sf::Drawable
 {
 public:
@@ -19,13 +32,16 @@ public:
     void updateAnimation();
     void attack(Pokemonster& target, int selectedMoveIndex);
     void setPosition(float x, float y);
-
-    // Escala visual del sprite (para efecto estilo Pokémon clásico)
     void setScale(float x, float y);
 
     void takeDamage(int damage);
     bool isFainted()   const;
     bool isAnimating() const { return isAttacking; }
+
+    // ── Atributo ──────────────────────────────────────────────────────────
+    void      setAttribute(Attribute a) { attribute = a; }
+    Attribute getAttribute()      const { return attribute; }
+    // ──────────────────────────────────────────────────────────────────────
 
     // ── Energía ───────────────────────────────────────────────────────────
     static const int MAX_ENERGY = 10;
@@ -51,6 +67,7 @@ private:
     int               attackStat;
     int               defense;
     std::vector<Move> moves;
+    Attribute         attribute;   // atributo de este personaje
 
     sf::Texture texture;
     sf::Sprite  sprite;
@@ -60,12 +77,10 @@ private:
     bool  isAttacking;
     sf::Clock animClock;
 
-    // Daño diferido (Bug 1 fix)
     int          pendingDamage;
     bool         hasPendingDamage;
     Pokemonster* damageTarget;
 
-    // Energía
     int energy;
 };
 

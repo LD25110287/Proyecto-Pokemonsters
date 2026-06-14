@@ -11,7 +11,8 @@ const sf::Color BattleUI::BTN_NO_ENERGY   = sf::Color(45,  45,  45);   // gris g
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 BattleUI::BattleUI(const sf::Vector2u& windowSize)
-    : winSize(windowSize), player(nullptr), enemy(nullptr), activeIsP1(true)
+    : winSize(windowSize), player(nullptr), enemy(nullptr), activeIsP1(true),
+      p1Attribute(Attribute::Vacuna), p2Attribute(Attribute::Vacuna)
 {
     if (!font.loadFromFile("assets/fonts/arial.ttf"))
     {
@@ -29,12 +30,12 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
     playerHpBack.setFillColor(sf::Color(30, 30, 30, 200));
     playerHpBack.setOutlineThickness(2.f);
     playerHpBack.setOutlineColor(sf::Color(100, 100, 100));
-    playerHpBack.setPosition(20.f, 340.f);
+    playerHpBack.setPosition(60.f, 340.f);
 
     // Barra de color (Más chica e incrustada +2px)
     playerHpFront.setSize({216.f, 16.f});
     playerHpFront.setFillColor(sf::Color(50, 200, 50));
-    playerHpFront.setPosition(22.f, 342.f);
+    playerHpFront.setPosition(62.f, 342.f);
 
     // ── Barra HP Jugador 2 (arriba-derecha) ───────────────────────────────────
     // Fondo semi-transparente con marco
@@ -51,7 +52,7 @@ BattleUI::BattleUI(const sf::Vector2u& windowSize)
 
     // ── Barras de energía ─────────────────────────────────────────────────────
     // Ajustadas un poco en Y para no encimarse con el nuevo marco
-    buildEnergyBar(playerEnergyCells, 20.f,              368.f, sf::Color(0, 200, 255));
+    buildEnergyBar(playerEnergyCells, 60.f,              368.f, sf::Color(0, 200, 255));
     buildEnergyBar(enemyEnergyCells,  winSize.x - 240.f, 48.f,  sf::Color(255, 180, 0));
 
     // ── Panel de botones (abajo-derecha, igual posición que antes) ────────────
@@ -112,6 +113,31 @@ void BattleUI::buildEnergyBar(std::vector<sf::RectangleShape>& cells,
 // ── Setters ───────────────────────────────────────────────────────────────────
 void BattleUI::setPlayerPokemon(Pokemonster* p) { player = p; }
 void BattleUI::setEnemyPokemon(Pokemonster* e)  { enemy  = e; }
+
+// ── loadAttributeIcons ────────────────────────────────────────────────────────
+void BattleUI::loadAttributeIcons()
+{
+    // Cargar las 3 texturas de atributo
+    if (!attrTexVa.loadFromFile("assets/images/atributo_Va.png"))
+        std::cerr << "[BattleUI] No se cargo atributo_Va.png\n";
+    if (!attrTexVi.loadFromFile("assets/images/atributo_Vi.png"))
+        std::cerr << "[BattleUI] No se cargo atributo_Vi.png\n";
+    if (!attrTexDa.loadFromFile("assets/images/atributo_Da.png"))
+        std::cerr << "[BattleUI] No se cargo atributo_Da.png\n";
+
+    // Posición J1: esquina superior izquierda de su barra HP
+    // La barra HP de J1 está en (60, 340) → ícono a su izquierda
+    p1AttrSprite.setScale(0.7f, 0.7f);  // 50*0.7 = 35px
+    p1AttrSprite.setPosition(60.f - 38.f, 338.f);   // a la izquierda de la barra
+
+    // Posición J2: esquina superior izquierda de su barra HP
+    // La barra HP de J2 está en (winSize.x-240, 20) → ícono a su izquierda
+    p2AttrSprite.setScale(0.7f, 0.7f);
+    p2AttrSprite.setPosition(winSize.x - 240.f - 38.f, 18.f);
+}
+
+// ── Actualizar textura del ícono según atributo ───────────────────────────────
+static sf::Texture* getAttrTex(BattleUI& ui, Attribute a);  // forward decl
 
 // ── Cambiar jugador activo → recarga el panel completo ────────────────────────
 void BattleUI::setActivePlayer(bool isPlayer1Turn)
@@ -214,6 +240,17 @@ void BattleUI::update()
             enemyEnergyCells[i].setFillColor(i < e ? c2 : sf::Color(40, 40, 40));
     }
 
+    // ── Actualizar íconos de atributo ─────────────────────────────────────────
+    auto applyAttrTex = [&](sf::Sprite& spr, Attribute a) {
+        switch (a) {
+            case Attribute::Vacuna: if (attrTexVa.getSize().x>0) spr.setTexture(attrTexVa); break;
+            case Attribute::Virus:  if (attrTexVi.getSize().x>0) spr.setTexture(attrTexVi); break;
+            case Attribute::Data:   if (attrTexDa.getSize().x>0) spr.setTexture(attrTexDa); break;
+        }
+    };
+    applyAttrTex(p1AttrSprite, p1Attribute);
+    applyAttrTex(p2AttrSprite, p2Attribute);
+
     // ── Actualizar colores de botones si cambia la energía disponible ─────────
     refreshButtons();
 }
@@ -230,6 +267,13 @@ void BattleUI::draw(sf::RenderTarget& target)
     // Energía
     for (auto& c : playerEnergyCells) target.draw(c);
     for (auto& c : enemyEnergyCells)  target.draw(c);
+
+    // Íconos de atributo junto a las barras HP
+    if (attrTexVa.getSize().x > 0 || attrTexVi.getSize().x > 0 || attrTexDa.getSize().x > 0)
+    {
+        target.draw(p1AttrSprite);
+        target.draw(p2AttrSprite);
+    }
 
     // Etiqueta de turno
     if (font.getInfo().family.size() > 0)
