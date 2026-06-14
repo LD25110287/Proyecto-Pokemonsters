@@ -1,5 +1,6 @@
 #include "../include/Game.h"
 #include "../include/Move.h"
+#include "../include/AudioManager.h"
 #include <iostream>
 
 // ── Tabla de los 6 personajes ─────────────────────────────────────────────────
@@ -227,6 +228,9 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
     loadBg(battleBgTexture, battleBg, bgIndex);
     initBattleUI(p1Index, p2Index);
     announceClock.restart();
+
+    // Sonido "Ronda X" superpuesto a la música de combate
+    AudioManager::playRoundAnnounce(roundNumber);
 }
 
 // ── Constructor KoF ───────────────────────────────────────────────────────────
@@ -274,6 +278,10 @@ Game::Game(int p1Index, int p2Index, int bgIndex,
     loadBg(battleBgTexture, battleBg, bgIndex);
     initBattleUI(p1Index, p2Index);
     announceClock.restart();
+
+    // Sonido "Ronda X" superpuesto a la música de combate
+    // (roundNumber 4+ reutiliza el audio de la ronda 3, ver AudioManager)
+    AudioManager::playRoundAnnounce(roundNumber);
 }
 
 Game::~Game() { window.close(); }
@@ -330,7 +338,7 @@ void Game::run()
 
             drawRoundAnnouncement();
 
-            if (announceClock.getElapsedTime().asSeconds() >= 2.f)
+            if (announceClock.getElapsedTime().asSeconds() >= 3.f)
             {
                 phase           = GamePhase::BATTLE;
                 waitingForInput = true;

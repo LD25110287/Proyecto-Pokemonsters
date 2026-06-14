@@ -23,6 +23,11 @@ public:
     // Música de combate (en bucle): mientras dura la batalla.
     static void playBattleMusic();
 
+    // Sonido de anuncio de ronda (round_1/2/3.mp3). Se reproduce UNA VEZ,
+    // superpuesto sobre la música de fondo (no la interrumpe).
+    // roundNumber 4+ reutiliza el audio de la ronda 3.
+    static void playRoundAnnounce(int roundNumber);
+
     // Ajusta el volumen de la música actual (0.0 a 100.0). Se conserva
     // y se reaplica automáticamente al cambiar de pista.
     static void setVolume(float volume);
@@ -37,6 +42,11 @@ private:
     static sf::Music music;
     static Track     currentTrack;
     static float     currentVolume;   // 0-100, persiste entre cambios de pista
+
+    // Sonidos de anuncio de ronda (cargados una sola vez, en memoria)
+    static sf::SoundBuffer roundBuffers[3];
+    static sf::Sound       roundSound;
+    static bool            roundBuffersLoaded;
 };
 
 #endif // AUDIOMANAGER_H

@@ -44,7 +44,10 @@ int main()
 
         AudioManager::playBattleMusic();
 
-        // La serie dura hasta que alguien gane 2 rondas o se agoten los personajes
+        // La serie dura hasta que alguien gane 2 rondas o se agoten los personajes.
+        // Al ser un juego por turnos NO puede haber empate: cada ronda gana
+        // exactamente J1 o J2, así que p1Wins+p2Wins sube 1 por ronda y la
+        // serie nunca supera 3 rondas (roundNumber máximo = 3).
         while (p1Wins < 2 && p2Wins < 2 &&
                p1TeamIdx < 3 && p2TeamIdx < 3)
         {
@@ -66,21 +69,13 @@ int main()
                 survivorP2 = nullptr;
                 p2TeamIdx++;
             }
-            else if (w == 2)
+            else // w == 2 (no puede haber empate en un juego por turnos)
             {
                 // J2 ganó: su personaje sobrevive, J1 pasa al siguiente
                 p2Wins++;
                 survivorP2 = new Pokemonster(game.getEnemy());
                 survivorP1 = nullptr;
                 p1TeamIdx++;
-            }
-            else
-            {
-                // Empate: ambos eliminados, ambos pasan al siguiente
-                survivorP1 = nullptr;
-                survivorP2 = nullptr;
-                p1TeamIdx++;
-                p2TeamIdx++;
             }
 
             roundNumber++;
@@ -99,4 +94,3 @@ int main()
 
     return 0;
 }
-

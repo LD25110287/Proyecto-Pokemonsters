@@ -6,6 +6,10 @@ sf::Music           AudioManager::music;
 AudioManager::Track AudioManager::currentTrack  = AudioManager::Track::NONE;
 float               AudioManager::currentVolume = 50.f;   // 50% por defecto
 
+sf::SoundBuffer AudioManager::roundBuffers[3];
+sf::Sound       AudioManager::roundSound;
+bool            AudioManager::roundBuffersLoaded = false;
+
 // ── Intro (3 seg, una sola vez al iniciar la app) ────────────────────────────
 void AudioManager::playIntro()
 {
@@ -66,6 +70,35 @@ void AudioManager::playBattleMusic()
         std::cerr << "[Audio] No se pudo cargar 'musica_fondo_combate.mp3'\n";
         currentTrack = Track::NONE;
     }
+}
+
+// ── Anuncio de ronda (round_1/2/3.mp3, superpuesto sobre la música) ──────────
+void AudioManager::playRoundAnnounce(int roundNumber)
+{
+    // Cargar los 3 buffers una sola vez (lazy load)
+    if (!roundBuffersLoaded)
+    {
+        const std::string paths[3] = {
+            "assets/sounds/round_1.mp3",
+            "assets/sounds/round_2.mp3",
+            "assets/sounds/round_3.mp3"
+        };
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!roundBuffers[i].loadFromFile(paths[i]))
+                std::cerr << "[Audio] No se pudo cargar '" << paths[i] << "'\n";
+        }
+        roundBuffersLoaded = true;
+    }
+
+    // Ronda 1->idx0, 2->idx1, 3->idx2. Ronda 4+ reutiliza el sonido de ronda 3.
+    int idx = roundNumber - 1;
+    if (idx < 0) idx = 0;
+    if (idx > 2) idx = 2;
+
+    roundSound.setBuffer(roundBuffers[idx]);
+    roundSound.setVolume(currentVolume);
+    roundSound.play();
 }
 
 // ── Volumen ───────────────────────────────────────────────────────────────────
