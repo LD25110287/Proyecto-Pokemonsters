@@ -5,10 +5,8 @@
 
 int main()
 {
-    // ── Sonido de introducción (3 seg, una sola vez) ─────────────────────────
     AudioManager::playIntro();
 
-    // Bucle principal: permite regresar al menú después de una partida
     while (true)
     {
         // ── 1. Menú principal ─────────────────────────────────────────────────
@@ -17,47 +15,88 @@ int main()
         menu.run();
 
         if (!menu.shouldLaunchGame())
-            return 0;   // El jugador eligió Salir
+            return 0;
 
-        // ── 2. Selección de personajes (3 por jugador) ────────────────────────
-        // Misma música de menú (no se reinicia si ya estaba sonando)
+        // ── 2. Selección de personajes ────────────────────────────────────────
         AudioManager::playMenuMusic();
         CharacterSelect selector;
         selector.run();
 
         if (!selector.shouldLaunchBattle())
-            continue;   // Volvió al menú sin jugar
+            continue;
 
-        // ── 3. Serie de 3 rondas ──────────────────────────────────────────────
         const auto& p1Team = selector.getPlayer1Team();
         const auto& p2Team = selector.getPlayer2Team();
-        int stage          = selector.getSelectedStage();
+        int stage           = selector.getSelectedStage();
+
+        // ── 3. Serie KoF ──────────────────────────────────────────────────────
+        // Índices actuales en el equipo de cada jugador
+        int p1TeamIdx = 0;  // qué personaje del equipo J1 está en campo
+        int p2TeamIdx = 0;  // qué personaje del equipo J2 está en campo
 
         int p1Wins = 0;
         int p2Wins = 0;
+        int roundNumber = 1;
 
-        // Música de combate: empieza antes de la primera ronda y continúa
-        // sonando sin interrupción entre rondas (currentTrack ya es BATTLE)
+        // Sobrevivientes: nullptr = hay que crear uno nuevo
+        Pokemonster* survivorP1 = nullptr;
+        Pokemonster* survivorP2 = nullptr;
+
         AudioManager::playBattleMusic();
 
-        for (int round = 0; round < 3; ++round)
+        // La serie dura hasta que alguien gane 2 rondas o se agoten los personajes
+        while (p1Wins < 2 && p2Wins < 2 &&
+               p1TeamIdx < 3 && p2TeamIdx < 3)
         {
-            if (p1Wins >= 2 || p2Wins >= 2)
-                break;
+            int p1CharIdx = p1Team[p1TeamIdx];
+            int p2CharIdx = p2Team[p2TeamIdx];
 
-            Game game(p1Team[round], p2Team[round], stage);
+            // Crear la ronda KoF
+            Game game(p1CharIdx, p2CharIdx, stage,
+                      survivorP1, survivorP2, roundNumber);
             game.run();
 
-            if (game.getWinner() == 1)
+            int w = game.getWinner();
+
+            if (w == 1)
+            {
+                // J1 ganó: su personaje sobrevive, J2 pasa al siguiente
                 p1Wins++;
-            else if (game.getWinner() == 2)
+                survivorP1 = new Pokemonster(game.getPlayer()); // copia con vida actual
+                survivorP2 = nullptr;
+                p2TeamIdx++;
+            }
+            else if (w == 2)
+            {
+                // J2 ganó: su personaje sobrevive, J1 pasa al siguiente
                 p2Wins++;
+                survivorP2 = new Pokemonster(game.getEnemy());
+                survivorP1 = nullptr;
+                p1TeamIdx++;
+            }
+            else
+            {
+                // Empate: ambos eliminados, ambos pasan al siguiente
+                survivorP1 = nullptr;
+                survivorP2 = nullptr;
+                p1TeamIdx++;
+                p2TeamIdx++;
+            }
+
+            roundNumber++;
+
+            // Limpiar punteros dinámicos si ya no se usarán
+            if (p1TeamIdx >= 3) { delete survivorP1; survivorP1 = nullptr; }
+            if (p2TeamIdx >= 3) { delete survivorP2; survivorP2 = nullptr; }
         }
 
-        // La serie termina → vuelve al while(true) y AudioManager::playMenuMusic()
-        // cambiará de pista automáticamente al inicio de la siguiente vuelta.
+        // Limpiar al salir de la serie
+        delete survivorP1;
+        delete survivorP2;
 
-    }   // fin while(true)
+        // Vuelve al menú para otra partida
+    }
 
     return 0;
 }
+

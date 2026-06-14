@@ -161,23 +161,27 @@ Pokemonster Game::buildCharacter(int index, bool isPlayer)
     return p;
 }
 
-// ── Constructor ───────────────────────────────────────────────────────────────
-Game::Game(int p1Index, int p2Index, int bgIndex)
-    : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
-    , isRunning(true)
-    , winner(0)
-    , currentTurn(TurnState::PLAYER1_TURN)
-    , waitingForInput(true)
-    , animationPlaying(false)
-    , delayScheduled(false)
-    , player(buildCharacter(p1Index, true))
-    , enemy(buildCharacter(p2Index, false))
-    , battleUI(window.getSize())
+// ── Helper: inicializar BattleUI ──────────────────────────────────────────────
+void Game::initBattleUI(int p1Index, int p2Index)
 {
-    window.setFramerateLimit(60);
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    battleUI.setPlayerPokemon(&player);
+    battleUI.setEnemyPokemon(&enemy);
+    battleUI.loadAttributeIcons();
 
-    // Fondo aleatorio de batalla
+    int safe1 = (p1Index < 0 || p1Index > 5) ? 0 : p1Index;
+    int safe2 = (p2Index < 0 || p2Index > 5) ? 0 : p2Index;
+    battleUI.setPlayerAttribute(ATTR_TABLE[safe1]);
+    battleUI.setEnemyAttribute (ATTR_TABLE[safe2]);
+
+    battleUI.updateMoveButtons(&player, true);
+    battleUI.updateMoveButtons(&enemy,  false);
+    battleUI.setActivePlayer(true);
+    battleUI.update();
+}
+
+// ── Helper: cargar fondo ──────────────────────────────────────────────────────
+static void loadBg(sf::Texture& tex, sf::Sprite& spr, int bgIndex)
+{
     const std::string BG_PATHS[3] = {
         "assets/images/fondo_batalla_campo.png",
         "assets/images/fondo_batalla_red_crystal.png",
@@ -185,34 +189,156 @@ Game::Game(int p1Index, int p2Index, int bgIndex)
     };
     if (bgIndex < 0 || bgIndex >= 3)
         bgIndex = std::rand() % 3;
-    if (battleBgTexture.loadFromFile(BG_PATHS[bgIndex]))
+    if (tex.loadFromFile(BG_PATHS[bgIndex]))
     {
-        battleBg.setTexture(battleBgTexture);
-        sf::Vector2u texSize = battleBgTexture.getSize();
-        battleBg.setScale(800.f / static_cast<float>(texSize.x),
-                          600.f / static_cast<float>(texSize.y));
+        spr.setTexture(tex);
+        sf::Vector2u sz = tex.getSize();
+        spr.setScale(800.f / sz.x, 600.f / sz.y);
     }
-    else
-        std::cerr << "[Game] No se pudo cargar fondo: " << BG_PATHS[bgIndex] << "\n";
+}
 
-    battleUI.setPlayerPokemon(&player);
-    battleUI.setEnemyPokemon(&enemy);
-    battleUI.loadAttributeIcons();
-    battleUI.setPlayerAttribute(ATTR_TABLE[p1Index < 0 || p1Index > 5 ? 0 : p1Index]);
-    battleUI.setEnemyAttribute (ATTR_TABLE[p2Index < 0 || p2Index > 5 ? 0 : p2Index]);
-    battleUI.updateMoveButtons(&player, true);
-    battleUI.updateMoveButtons(&enemy,  false);
-    battleUI.setActivePlayer(true);
-    battleUI.update();
+// ── Constructor normal ────────────────────────────────────────────────────────
+Game::Game(int p1Index, int p2Index, int bgIndex)
+    : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
+    , isRunning(true)
+    , winner(0)
+    , phase(GamePhase::ANNOUNCING)
+    , roundNumber(1)
+    , currentTurn(TurnState::PLAYER1_TURN)
+    , waitingForInput(false)
+    , animationPlaying(false)
+    , delayScheduled(false)
+    , player(buildCharacter(p1Index, true))
+    , enemy(buildCharacter(p2Index, false))
+    , battleUI(window.getSize())
+    , bgIndex_(bgIndex)
+{
+    window.setFramerateLimit(60);
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    std::vector<std::string> fontPaths = {
+        "assets/fonts/arial.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibri.ttf"
+    };
+    for (auto& fp : fontPaths)
+        if (font_.loadFromFile(fp)) break;
+
+    loadBg(battleBgTexture, battleBg, bgIndex);
+    initBattleUI(p1Index, p2Index);
+    announceClock.restart();
+}
+
+// ── Constructor KoF ───────────────────────────────────────────────────────────
+Game::Game(int p1Index, int p2Index, int bgIndex,
+           Pokemonster* survivorP1, Pokemonster* survivorP2,
+           int roundNum)
+    : window(sf::VideoMode(800, 600), "Pokemonsters - Batalla")
+    , isRunning(true)
+    , winner(0)
+    , phase(GamePhase::ANNOUNCING)
+    , roundNumber(roundNum)
+    , currentTurn(TurnState::PLAYER1_TURN)
+    , waitingForInput(false)
+    , animationPlaying(false)
+    , delayScheduled(false)
+    , player(survivorP1 ? *survivorP1 : buildCharacter(p1Index, true))
+    , enemy (survivorP2 ? *survivorP2 : buildCharacter(p2Index, false))
+    , battleUI(window.getSize())
+    , bgIndex_(bgIndex)
+{
+    window.setFramerateLimit(60);
+
+    std::vector<std::string> fontPaths = {
+        "assets/fonts/arial.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibri.ttf"
+    };
+    for (auto& fp : fontPaths)
+        if (font_.loadFromFile(fp)) break;
+
+    // Si viene sobreviviente, reposicionarlo para este escenario
+    if (survivorP1)
+    {
+        int idx = (p1Index < 0 || p1Index > 5) ? 0 : p1Index;
+        player.setScale(SCALE_TABLE[idx].scalePlayer, SCALE_TABLE[idx].scalePlayer);
+        player.setPosition(POS_TABLE[idx].px, POS_TABLE[idx].py);
+    }
+    if (survivorP2)
+    {
+        int idx = (p2Index < 0 || p2Index > 5) ? 0 : p2Index;
+        enemy.setScale(-SCALE_TABLE[idx].scaleEnemy, SCALE_TABLE[idx].scaleEnemy);
+        enemy.setPosition(POS_TABLE[idx].ex, POS_TABLE[idx].ey);
+    }
+
+    loadBg(battleBgTexture, battleBg, bgIndex);
+    initBattleUI(p1Index, p2Index);
+    announceClock.restart();
 }
 
 Game::~Game() { window.close(); }
+
+// ── Pantalla de anuncio de ronda ──────────────────────────────────────────────
+void Game::drawRoundAnnouncement()
+{
+    window.clear(sf::Color(10, 10, 20));
+    window.draw(battleBg);
+
+    // Overlay oscuro semi-transparente
+    sf::RectangleShape overlay(sf::Vector2f(800.f, 600.f));
+    overlay.setFillColor(sf::Color(0, 0, 0, 160));
+    window.draw(overlay);
+
+    // Texto "Ronda X"
+    std::string roundStr = "Ronda " + std::to_string(roundNumber);
+    sf::Text txt(roundStr, font_, 72);
+    txt.setStyle(sf::Text::Bold);
+    txt.setFillColor(sf::Color(255, 215, 0));
+    txt.setOutlineColor(sf::Color::Black);
+    txt.setOutlineThickness(4.f);
+    float tx = (800.f - txt.getLocalBounds().width)  / 2.f;
+    float ty = (600.f - txt.getLocalBounds().height) / 2.f - 40.f;
+    txt.setPosition(tx, ty);
+    window.draw(txt);
+
+    // Subtexto "¡Pelea!"
+    sf::Text sub("Pelea!", font_, 36);
+    sub.setFillColor(sf::Color::White);
+    sub.setOutlineColor(sf::Color::Black);
+    sub.setOutlineThickness(2.f);
+    float sx = (800.f - sub.getLocalBounds().width) / 2.f;
+    sub.setPosition(sx, ty + 90.f);
+    window.draw(sub);
+
+    window.display();
+}
 
 // ── run ───────────────────────────────────────────────────────────────────────
 void Game::run()
 {
     while (window.isOpen() && isRunning && currentTurn != TurnState::BATTLE_OVER)
     {
+        // ── Fase ANNOUNCING: mostrar "Ronda X" por 2 segundos ─────────────────
+        if (phase == GamePhase::ANNOUNCING)
+        {
+            sf::Event event;
+            while (window.pollEvent(event))
+            {
+                if (event.type == sf::Event::Closed)
+                { window.close(); isRunning = false; return; }
+            }
+
+            drawRoundAnnouncement();
+
+            if (announceClock.getElapsedTime().asSeconds() >= 2.f)
+            {
+                phase           = GamePhase::BATTLE;
+                waitingForInput = true;
+            }
+            continue;
+        }
+
+        // ── Fase BATTLE ───────────────────────────────────────────────────────
         sf::Event event;
         while (window.pollEvent(event))
         {

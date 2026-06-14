@@ -11,25 +11,45 @@
 class Game
 {
 public:
+    // Constructor normal (primera ronda o personaje nuevo para ambos)
     Game(int p1Index, int p2Index, int bgIndex = -1);
+
+    // Constructor KoF: uno o ambos personajes vienen de la ronda anterior
+    // con su vida/energía actuales. Si el índice es -1 se reutiliza el
+    // Pokemonster pasado directamente.
+    Game(int p1Index, int p2Index, int bgIndex,
+         Pokemonster* survivorP1,   // nullptr = crear nuevo
+         Pokemonster* survivorP2,   // nullptr = crear nuevo
+         int roundNumber);
+
     ~Game();
     void run();
 
-    // Devuelve quién ganó: 1 = Jugador 1, 2 = Jugador 2, 0 = sin resultado
     int getWinner() const { return winner; }
+
+    // Acceso al sobreviviente para pasarlo a la siguiente ronda
+    Pokemonster& getPlayer()  { return player; }
+    Pokemonster& getEnemy()   { return enemy;  }
 
 private:
     void handleEvents();
     void update();
     void render();
+    void drawRoundAnnouncement(); // pantalla "Ronda X"
 
     Pokemonster buildCharacter(int index, bool isPlayer);
+    void        initBattleUI(int p1Index, int p2Index);
 
-    enum class TurnState { PLAYER1_TURN, PLAYER2_TURN, BATTLE_OVER };
+    enum class TurnState  { PLAYER1_TURN, PLAYER2_TURN, BATTLE_OVER };
+    enum class GamePhase  { ANNOUNCING, BATTLE };   // fase actual
 
     sf::RenderWindow window;
     bool isRunning;
-    int  winner;   // 0 = sin ganador, 1 = J1 ganó, 2 = J2 ganó
+    int  winner;
+
+    GamePhase phase;
+    int       roundNumber;
+    sf::Clock announceClock;   // temporizador para la pantalla de anuncio
 
     TurnState currentTurn;
     bool      waitingForInput;
@@ -38,13 +58,16 @@ private:
     sf::Clock animDelayClock;
     bool      delayScheduled;
 
-    Pokemonster player;   // Jugador 1
-    Pokemonster enemy;    // Jugador 2
+    Pokemonster player;
+    Pokemonster enemy;
 
     BattleUI battleUI;
 
     sf::Texture battleBgTexture;
     sf::Sprite  battleBg;
+    int         bgIndex_;
+
+    sf::Font font_;   // fuente para el anuncio de ronda
 };
 
 #endif // GAME_H
