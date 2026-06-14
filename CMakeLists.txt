@@ -20,6 +20,7 @@ set(SOURCES
     src/MenuScreen.cpp
     src/Move.cpp
     src/CharacterSelect.cpp
+    src/AudioManager.cpp
 )
 
 add_executable(pokemonster ${SOURCES})
