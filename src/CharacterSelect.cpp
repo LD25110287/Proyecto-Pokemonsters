@@ -2,6 +2,18 @@
 #include <iostream>
 #include <algorithm>
 
+// ── Helpers internos ──────────────────────────────────────────────────────────
+// Devuelve el índice en attrTextures[] para un Attribute dado
+static int attrIndex(Attribute a)
+{
+    switch (a) {
+        case Attribute::Vacuna: return 0;
+        case Attribute::Virus:  return 1;
+        case Attribute::Data:   return 2;
+    }
+    return 0;
+}
+
 // ── Constructor ───────────────────────────────────────────────────────────────
 CharacterSelect::CharacterSelect()
     : window(sf::VideoMode(800, 600), "Pokemonsters - Seleccion de Personaje", sf::Style::Close)
@@ -17,6 +29,7 @@ CharacterSelect::CharacterSelect()
     window.setFramerateLimit(60);
     p1Team.fill(-1);
     p2Team.fill(-1);
+    attrLoaded[0] = attrLoaded[1] = attrLoaded[2] = false;
 
     characters = {
         { "Exdarktyranomon", "assets/images/1.png", "assets/images/champ_select_1.png",  50,  50, 500, 22, 8  },
@@ -30,7 +43,7 @@ CharacterSelect::CharacterSelect()
     loadAssets();
 }
 
-// ── Carga de assets ───────────────────────────────────────────────────────────
+// ── loadAssets ────────────────────────────────────────────────────────────────
 void CharacterSelect::loadAssets()
 {
     std::vector<std::string> fontPaths = {
@@ -81,9 +94,42 @@ void CharacterSelect::loadAssets()
             portraitSprites[i].setScale(100.f / sz.x, 100.f / sz.y);
         }
     }
+
+    // ── Íconos de atributo ────────────────────────────────────────────────────
+    // 0 = Vacuna → atributo_Va.png
+    // 1 = Virus  → atributo_Vi.png
+    // 2 = Data   → atributo_Da.png
+    const std::string attrPaths[3] = {
+        "assets/images/atributo_Va.png",
+        "assets/images/atributo_Vi.png",
+        "assets/images/atributo_Da.png",
+    };
+    for (int i = 0; i < 3; ++i)
+    {
+        if (attrTextures[i].loadFromFile(attrPaths[i]))
+            attrLoaded[i] = true;
+        else
+            std::cerr << "[Warning] No se pudo cargar: " << attrPaths[i] << "\n";
+    }
 }
 
-// ── Helper: texto con sombra ──────────────────────────────────────────────────
+// ── drawAttributeIcon ─────────────────────────────────────────────────────────
+// Dibuja el ícono del atributo escalado a iconSize×iconSize px, con top-left en (x, y)
+void CharacterSelect::drawAttributeIcon(Attribute attr, float x, float y, float iconSize)
+{
+    int idx = attrIndex(attr);
+    if (!attrLoaded[idx]) return;
+
+    sf::Sprite icon(attrTextures[idx]);
+    auto sz = attrTextures[idx].getSize();
+    if (sz.x == 0 || sz.y == 0) return;
+
+    icon.setScale(iconSize / sz.x, iconSize / sz.y);
+    icon.setPosition(x, y);
+    window.draw(icon);
+}
+
+// ── drawTextShadow ────────────────────────────────────────────────────────────
 void CharacterSelect::drawTextShadow(const std::string& str, unsigned int size,
                                      sf::Color color, float x, float y,
                                      sf::Text::Style style)
@@ -101,7 +147,7 @@ void CharacterSelect::drawTextShadow(const std::string& str, unsigned int size,
     window.draw(text);
 }
 
-// ── Helper: dibujar portrait ──────────────────────────────────────────────────
+// ── drawPortrait ──────────────────────────────────────────────────────────────
 void CharacterSelect::drawPortrait(int charIndex, float cx, float cy, float size,
                                    sf::Color borderColor, float borderThick)
 {
@@ -116,7 +162,6 @@ void CharacterSelect::drawPortrait(int charIndex, float cx, float cy, float size
     local.setScale(scaleX, scaleY);
     local.setPosition(cx - size / 2.f, cy - size / 2.f);
 
-    // Borde opcional
     if (borderThick > 0.f && borderColor != sf::Color::Transparent)
     {
         sf::RectangleShape border(sf::Vector2f(size + borderThick * 2.f,
@@ -224,7 +269,7 @@ void CharacterSelect::handleEvents()
                         for (int t = 0; t < 3; ++t) if (p2Team[t] == picks[i]) alreadyPlaced = true;
                     }
 
-                    if (alreadyPlaced) break; 
+                    if (alreadyPlaced) break;
 
                     if (curIsJ1) p1Team[curSlot] = picks[i];
                     else         p2Team[curSlot] = picks[i];
@@ -276,7 +321,7 @@ void CharacterSelect::handleEvents()
 // ── update ────────────────────────────────────────────────────────────────────
 void CharacterSelect::update()
 {
-    // Limpiamos update para dejar la lógica de animación dentro del render (drawStageSelect)
+    // Lógica de animación dentro del render (drawStageSelect)
 }
 
 // ── drawPickingScreen ─────────────────────────────────────────────────────────
@@ -285,7 +330,6 @@ void CharacterSelect::drawPickingScreen()
     window.clear(sf::Color(18, 18, 32));
 
     bool isJ1Turn = (pickTurn % 2 == 0);
-
     sf::Color j1Color(100, 180, 255);
     sf::Color j2Color(255, 120, 120);
 
@@ -317,6 +361,7 @@ void CharacterSelect::drawPickingScreen()
         drawTextShadow(turnMsg, 16, turnColor, tx, 118.f, sf::Text::Bold);
     }
 
+    // ── Grid de cartas ────────────────────────────────────────────────────────
     for (int row = 0; row < ROWS; ++row)
         for (int col = 0; col < COLS; ++col)
         {
@@ -334,13 +379,13 @@ void CharacterSelect::drawPickingScreen()
             bool pickedByJ2 = std::find(p2Picks.begin(), p2Picks.end(), idx) != p2Picks.end();
 
             if (pickedByJ1 && pickedByJ2)
-            { fillColor = sf::Color(60, 40, 80); outColor = sf::Color(180, 100, 255); outThick = 3.f; }
+            { fillColor = sf::Color(60, 40, 80);  outColor = sf::Color(180, 100, 255); outThick = 3.f; }
             else if (pickedByJ1)
             { fillColor = sf::Color(20, 50, 100); outColor = j1Color; outThick = 3.f; }
             else if (pickedByJ2)
-            { fillColor = sf::Color(80, 20, 20); outColor = j2Color; outThick = 3.f; }
+            { fillColor = sf::Color(80, 20, 20);  outColor = j2Color; outThick = 3.f; }
             else if (idx == hoveredCard)
-            { fillColor = sf::Color(60, 60, 90); outColor = sf::Color(255, 215, 0); outThick = 3.f; }
+            { fillColor = sf::Color(60, 60, 90);  outColor = sf::Color(255, 215, 0); outThick = 3.f; }
 
             sf::RectangleShape card(sf::Vector2f(CARD_W, CARD_H));
             card.setFillColor(fillColor);
@@ -349,12 +394,28 @@ void CharacterSelect::drawPickingScreen()
             card.setPosition(x, y);
             window.draw(card);
 
+            // Portrait centrado en la carta
             drawPortrait(idx, x + CARD_W / 2.f, y + CARD_H / 2.f - 15.f, 120.f);
 
+            // Nombre del personaje
             sf::Text nm(characters[idx].name, font, 13);
             nm.setFillColor(sf::Color::White);
             nm.setPosition(x + (CARD_W - nm.getLocalBounds().width) / 2.f, y + CARD_H - 28.f);
             window.draw(nm);
+
+            // ── Ícono de atributo: esquina inferior-izquierda de la imagen ────
+            // La imagen del portrait ocupa 120×120 px centrada en (x+CARD_W/2, y+CARD_H/2-15)
+            // → top-left de la imagen = (x+CARD_W/2-60, y+CARD_H/2-75)
+            // → bottom-left           = (x+CARD_W/2-60, y+CARD_H/2+45)
+            // Colocamos el ícono (24×24) con su esquina top-left en ese bottom-left
+            {
+                const float ICON_SIZE   = 24.f;
+                float imgLeft   = x + CARD_W / 2.f - 60.f;
+                float imgBottom = y + CARD_H / 2.f - 15.f + 60.f;   // bottom de la imagen
+                float iconX = imgLeft;
+                float iconY = imgBottom - ICON_SIZE;   // arriba del borde inferior
+                drawAttributeIcon(CHAR_ATTRIBUTES[idx], iconX, iconY, ICON_SIZE);
+            }
 
             if (pickedByJ1)
                 drawTextShadow("J1", 12, j1Color, x + 4.f, y + 4.f, sf::Text::Bold);
@@ -448,6 +509,17 @@ void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
             drawTextShadow("OK", 20, sf::Color(100, 255, 100), cx - 15.f, cy - 12.f, sf::Text::Bold);
         }
 
+        // ── Ícono de atributo en la pantalla de orden ─────────────────────────
+        // La imagen tiene 110×110 px centrada en (cx, cy)
+        // Esquina inferior-izquierda → (cx-55, cy+55-ICON_SIZE)
+        {
+            const float ICON_SIZE = 22.f;
+            drawAttributeIcon(CHAR_ATTRIBUTES[picks[i]],
+                              cx - 55.f,
+                              cy + 55.f - ICON_SIZE,
+                              ICON_SIZE);
+        }
+
         drawTextShadow(characters[picks[i]].name, 13,
                        alreadyPlaced ? sf::Color(100, 100, 100) : sf::Color::White,
                        cx - 50.f, cy + 60.f);
@@ -475,21 +547,42 @@ void CharacterSelect::drawConfirmScreen()
 
     for (int i = 0; i < 3; ++i)
     {
+        // ── J1 ────────────────────────────────────────────────────────────────
         float cx1 = 150.f;
-        float cy1 = 170.f + i * 130.f; 
-        
-        drawPortrait(p1Team[i], cx1, cy1, 100.f, sf::Color::Transparent, 0.f);
-        
-        sf::Text n1(characters[p1Team[i]].name, font, 16);
-        drawTextShadow(characters[p1Team[i]].name, 16, sf::Color::White, cx1 - n1.getLocalBounds().width / 2.f, cy1 + 55.f);
+        float cy1 = 170.f + i * 130.f;
 
+        drawPortrait(p1Team[i], cx1, cy1, 100.f, sf::Color::Transparent, 0.f);
+
+        // Nombre con ícono de atributo a su izquierda
+        sf::Text n1(characters[p1Team[i]].name, font, 16);
+        float nameX1 = cx1 - n1.getLocalBounds().width / 2.f;
+        float nameY1 = cy1 + 55.f;
+
+        // Ícono a la izquierda del nombre
+        const float ICON_SIZE = 18.f;
+        drawAttributeIcon(CHAR_ATTRIBUTES[p1Team[i]],
+                          nameX1 - ICON_SIZE - 4.f,
+                          nameY1 + (n1.getLocalBounds().height - ICON_SIZE) / 2.f,
+                          ICON_SIZE);
+
+        drawTextShadow(characters[p1Team[i]].name, 16, sf::Color::White, nameX1, nameY1);
+
+        // ── J2 ────────────────────────────────────────────────────────────────
         float cx2 = 640.f;
         float cy2 = 170.f + i * 130.f;
 
         drawPortrait(p2Team[i], cx2, cy2, 100.f, sf::Color::Transparent, 0.f);
 
         sf::Text n2(characters[p2Team[i]].name, font, 16);
-        drawTextShadow(characters[p2Team[i]].name, 16, sf::Color::White, cx2 - n2.getLocalBounds().width / 2.f, cy2 + 55.f);
+        float nameX2 = cx2 - n2.getLocalBounds().width / 2.f;
+        float nameY2 = cy2 + 55.f;
+
+        drawAttributeIcon(CHAR_ATTRIBUTES[p2Team[i]],
+                          nameX2 - ICON_SIZE - 4.f,
+                          nameY2 + (n2.getLocalBounds().height - ICON_SIZE) / 2.f,
+                          ICON_SIZE);
+
+        drawTextShadow(characters[p2Team[i]].name, 16, sf::Color::White, nameX2, nameY2);
     }
 
     sf::RectangleShape btnJ(sf::Vector2f(160.f, 50.f));
@@ -514,24 +607,20 @@ void CharacterSelect::drawConfirmScreen()
 // ── drawStageSelect ───────────────────────────────────────────────────────────
 void CharacterSelect::drawStageSelect()
 {
-    // Fondo VS de base
     if (vsBgTexture.getSize().x > 0)
         window.draw(vsBgSprite);
     else
         window.clear(sf::Color(10, 10, 20));
 
-    // Título
     sf::Text title("Sorteo de Escenario", font, 32);
     drawTextShadow("Sorteo de Escenario", 32, sf::Color(255, 215, 0),
                    (800.f - title.getLocalBounds().width) / 2.f, 18.f, sf::Text::Bold);
 
-    // ── Animación de ruleta ───────────────────────────────────────────────────
     float elapsed = stageAnimClock.getElapsedTime().asSeconds();
     int displayIndex;
 
     if (!stageAnimDone)
     {
-        // Velocidad decrece con el tiempo
         float interval = 0.06f + (elapsed / 2.5f) * 0.24f;
         displayIndex   = static_cast<int>(elapsed / interval) % NUM_STAGES;
 
@@ -547,10 +636,9 @@ void CharacterSelect::drawStageSelect()
         displayIndex = selectedStage;
     }
 
-    // ── Dibujar las 3 miniaturas ──────────────────────────────────────────────
     const float THUMB_W     = 200.f;
     const float THUMB_H     = 120.f;
-    const float THUMB_W_SEL = 260.f;   
+    const float THUMB_W_SEL = 260.f;
     const float THUMB_H_SEL = 156.f;
     const float TOTAL_Y     = 200.f;
 
@@ -576,25 +664,16 @@ void CharacterSelect::drawStageSelect()
         sf::RectangleShape border(sf::Vector2f(w, h));
         border.setPosition(curX, y);
         border.setFillColor(sf::Color::Transparent);
-        if (isSelected)
-        {
-            border.setOutlineColor(sf::Color(255, 215, 0));
-            border.setOutlineThickness(4.f);
-        }
-        else
-        {
-            border.setOutlineColor(sf::Color(100, 100, 140));
-            border.setOutlineThickness(2.f);
-        }
+        border.setOutlineColor(isSelected ? sf::Color(255, 215, 0) : sf::Color(100, 100, 140));
+        border.setOutlineThickness(isSelected ? 4.f : 2.f);
         window.draw(border);
 
         curX += w + 20.f;
     }
 
-    // ── Nombres de los escenarios ─────────────────────────────────────────────
     const std::string STAGE_NAMES[NUM_STAGES] = { "Campo Abierto", "Cristales Rojos", "Arena Gladiadores" };
     curX = startX;
-    
+
     for (int i = 0; i < NUM_STAGES; ++i)
     {
         bool  isSelected = (i == displayIndex);
@@ -603,21 +682,20 @@ void CharacterSelect::drawStageSelect()
 
         sf::Text nm(STAGE_NAMES[i], font, isSelected ? 18 : 14);
         float nmX = curX + (w - nm.getLocalBounds().width) / 2.f;
-        
+
         drawTextShadow(STAGE_NAMES[i], isSelected ? 18 : 14,
                        isSelected ? sf::Color(255, 215, 0) : sf::Color(180, 180, 180),
                        nmX, nameY);
         curX += w + 20.f;
     }
 
-    // ── Mensaje inferior ──────────────────────────────────────────────────────
     if (stageAnimDone)
     {
         std::string msg = "Escenario: " + STAGE_NAMES[selectedStage];
         sf::Text t(msg, font, 24);
         float tx = (800.f - t.getLocalBounds().width) / 2.f;
         drawTextShadow(msg, 24, sf::Color(100, 255, 100), tx, 420.f, sf::Text::Bold);
-        
+
         sf::Text t2("Haz clic para comenzar la batalla!", font, 20);
         float tx2 = (800.f - t2.getLocalBounds().width) / 2.f;
         drawTextShadow("Haz clic para comenzar la batalla!", 20, sf::Color::White, tx2, 460.f);
