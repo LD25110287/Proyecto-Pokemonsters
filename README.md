@@ -4,7 +4,7 @@
 **Digital Monsters Battle** es un juego de combate estratégico 2D con estética *pixel art* que une la toma de decisiones tácticas de las batallas de monstruos clásicas con el formato competitivo de equipos de los juegos de lucha. Selecciona tu tercia de criaturas, elige el orden de combate y utiliza tus mejores ataques para derrotar al equipo rival en intensos combates por turnos.
 
 ## 🎯 Objetivo del Juego
-Eliminar a los 3 monstruos del equipo rival reduciendo sus Puntos de Vida (HP) a cero. El primer jugador en derrotar a toda la tercia del oponente gana la partida.
+Eliminar a los monstruos del equipo rival reduciendo sus Puntos de Vida (HP) a cero. El primer jugador en derrotar a toda la tercia del oponente gana la partida.
 
 ## 🎮 Controles
 El juego está diseñado para ser completamente controlado mediante una interfaz gráfica interactiva, ideal para jugar en modo local compartido (*Hotseat*):
