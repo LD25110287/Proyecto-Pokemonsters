@@ -1,6 +1,7 @@
 #include "../include/Game.h"
 #include "../include/MenuScreen.h"
 #include "../include/CharacterSelect.h"
+#include "../include/WinnerScreen.h"
 #include "../include/AudioManager.h"
 
 int main()
@@ -82,6 +83,14 @@ int main()
 
         delete survivorP1;
         delete survivorP2;
+
+        // ── Pantalla de ganador ────────────────────────────────────────────────
+        // p1Wins/p2Wins solo pueden estar en 2 (uno de ellos) al salir del while.
+        int winnerNumber = (p1Wins >= 2) ? 1 : 2;
+        const std::array<int,3>& winnerTeam = (winnerNumber == 1) ? p1Team : p2Team;
+
+        WinnerScreen winnerScreen(winnerNumber, winnerTeam);
+        winnerScreen.run();
 
         // Vuelve al menú para otra partida
     }
