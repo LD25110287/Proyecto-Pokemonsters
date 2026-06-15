@@ -1,19 +1,17 @@
 #include "../include/MenuScreen.h"
 #include "../include/AudioManager.h"
-#include "../include/Pokemonster.h"   // para Attribute
+#include "../include/Pokemonster.h"
 #include <iostream>
 
-// ── Atributos por personaje (mismo orden que chars[]) ─────────────────────────
+// ── Atributos por personaje ───────────────────────────────────────────────────
 static const Attribute MENU_CHAR_ATTR[6] = {
-    Attribute::Vacuna,  // 0: Exdarktyranomon
-    Attribute::Virus,   // 1: BeelStarmon
-    Attribute::Vacuna,  // 2: Bioquetzalmon
-    Attribute::Data,    // 3: Jesmon
-    Attribute::Vacuna,  // 4: Sleipmon
-    Attribute::Vacuna,  // 5: Magnamon
+    Attribute::Vacuna,
+    Attribute::Virus,
+    Attribute::Vacuna,
+    Attribute::Data,
+    Attribute::Vacuna,
+    Attribute::Vacuna,
 };
-
-// Nombre legible del atributo (para mostrar texto de respaldo si no carga el ícono)
 static const char* ATTR_NAME[3] = { "Vacuna", "Virus", "Data" };
 
 static int menuAttrIndex(Attribute a)
@@ -26,19 +24,29 @@ static int menuAttrIndex(Attribute a)
     return 0;
 }
 
+// ── Rutas de los botones (mismo orden que menuBtns_[]) ────────────────────────
+static const char* BTN_PATHS[4] = {
+    "assets/images/Boton_JUGAR.png",
+    "assets/images/Boton_Galeria.png",
+    "assets/images/Boton_Opciones.png",
+    "assets/images/Boton_Salir.png",
+};
+
+// ── Constructor ───────────────────────────────────────────────────────────────
 MenuScreen::MenuScreen()
-    : window(sf::VideoMode(800, 600), "Pokemonsters", sf::Style::Close),
-      state(MenuState::MAIN_MENU),
-      hoveredButton(-1),
-      launchGame(false),
-      detailIndex(-1),
-      volumeLevel(static_cast<int>(AudioManager::getVolume() / 10.f + 0.5f))
+    : window(sf::VideoMode(800, 600), "Pokemonsters", sf::Style::Close)
+    , state(MenuState::MAIN_MENU)
+    , hoveredButton(-1)
+    , launchGame(false)
+    , detailIndex(-1)
+    , volumeLevel(static_cast<int>(AudioManager::getVolume() / 10.f + 0.5f))
 {
     window.setFramerateLimit(60);
     loadAssets();
     loadCharacterPortraits();
     createMenuButtons();
 
+    // titleText solo se usa en submenús (en el menú principal hay imagen de fondo)
     titleText.setFont(font);
     titleText.setString("Pokemonsters");
     titleText.setCharacterSize(56);
@@ -96,9 +104,10 @@ MenuScreen::MenuScreen()
     txtVolumeValue.setPosition(545.f, 250.f);
 }
 
-// ── Assets ────────────────────────────────────────────────────────────────────
+// ── loadAssets ────────────────────────────────────────────────────────────────
 void MenuScreen::loadAssets()
 {
+    // Fuente
     std::vector<std::string> fallbacks = {
         "assets/fonts/arial.ttf",
         "C:/Windows/Fonts/arial.ttf",
@@ -107,11 +116,64 @@ void MenuScreen::loadAssets()
     for (auto& p : fallbacks)
         if (font.loadFromFile(p)) break;
 
-    // ── Íconos de atributo ────────────────────────────────────────────────────
+    // Fondo del menú principal
+    bgLoaded_ = bgTexture_.loadFromFile("assets/images/PORTADA_POKEMONSTER_800X600.png");
+    if (bgLoaded_)
+    {
+        bgSprite_.setTexture(bgTexture_);
+        // Escalar para llenar exactamente 800x600
+        sf::Vector2u sz = bgTexture_.getSize();
+        bgSprite_.setScale(800.f / sz.x, 600.f / sz.y);
+    }
+    else
+    {
+        std::cerr << "[MenuScreen] No se cargo PORTADA_POKEMONSTER_800X600.png\n";
+    }
+
+    // ── Botones con imagen ────────────────────────────────────────────────────
+    //
+    // Layout: columna derecha, centrada verticalmente.
+    // Los 4 botones se apilan con un pequeño gap entre ellos.
+    // Escala objetivo: los botones ocupan ~260px de ancho (≈1/3 de la pantalla)
+    // y se ubican en x≈510 (derecha), centrados verticalmente en y≈220-490.
+    //
+    const float BTN_SCALE = 220.f / 300.f;  // escala medida pixel a pixel sobre imagen ref
+    const float BTN_W     = 300.f * BTN_SCALE;  // 220 px
+    const float BTN_H     = 100.f * BTN_SCALE;  // ~73 px
+    const float GAP       = 18.f;
+    const float ANCHOR_X  = 293.f;   // centro x=403, borde izq=403-110
+    const float BASE_Y    = 316.f;   // primer boton (JUGAR)
+
+    float currentY = BASE_Y;
+
+    for (int i = 0; i < NUM_BTNS; ++i)
+    {
+        ImageButton& b = menuBtns_[i];
+        b.loaded = b.texNormal.loadFromFile(BTN_PATHS[i]);
+
+        if (!b.loaded)
+        {
+            std::cerr << "[MenuScreen] No se cargo " << BTN_PATHS[i] << "\n";
+            // Posición de reserva para que el hit-test tenga algo
+            b.bounds = sf::FloatRect(ANCHOR_X, currentY, BTN_W, BTN_H);
+            currentY += BTN_H + GAP;
+            continue;
+        }
+
+        b.sprite.setTexture(b.texNormal);
+        b.baseScale = BTN_SCALE;
+        b.sprite.setScale(BTN_SCALE, BTN_SCALE);
+        b.sprite.setPosition(ANCHOR_X, currentY);
+        b.bounds = sf::FloatRect(ANCHOR_X, currentY, BTN_W, BTN_H);
+
+        currentY += BTN_H + GAP;
+    }
+
+    // Íconos de atributo
     const std::string attrPaths[3] = {
-        "assets/images/atributo_Va.png",   // 0 = Vacuna
-        "assets/images/atributo_Vi.png",   // 1 = Virus
-        "assets/images/atributo_Da.png",   // 2 = Data
+        "assets/images/atributo_Va.png",
+        "assets/images/atributo_Vi.png",
+        "assets/images/atributo_Da.png",
     };
     for (int i = 0; i < 3; ++i)
     {
@@ -121,13 +183,14 @@ void MenuScreen::loadAssets()
     }
 }
 
+// ── loadCharacterPortraits ────────────────────────────────────────────────────
 void MenuScreen::loadCharacterPortraits()
 {
     chars = {
         { "Exdarktyranomon", "Un monstruo oscuro digital con un poder viral devastador y garras de hierro.", "assets/images/champ_select_1.png" },
         { "BeelStarmon",     "Una pistolera letal de los campos digitales que ataca a distancia con gran agilidad.", "assets/images/champ_select_2.png" },
         { "Bioquetzalmon",   "Ser alado ancestral que controla corrientes bio-electricas y posee una defensa mitica.", "assets/images/champ_select_3.png" },
-        { "Jesmon",          "Caballero sagrado que domina el arte de la espada de energia con un espitiru indomable.", "assets/images/champ_select_4.png" },
+        { "Jesmon",          "Caballero sagrado que domina el arte de la espada de energia con un espiritu indomable.", "assets/images/champ_select_4.png" },
         { "Sleipmon",        "Guerrero de armadura helada que posee una velocidad colosal y resistencia extrema.", "assets/images/champ_select_5.png" },
         { "Magnamon",        "Protector dorado con una armadura de Chrome Digizoid capaz de soportar ataques masivos.", "assets/images/champ_select_6.png" }
     };
@@ -147,8 +210,8 @@ void MenuScreen::loadCharacterPortraits()
             chars[i].sprite.setScale(120.f / sz.x, 120.f / sz.y);
         }
 
-        int col = i % 3;
-        int row = i / 3;
+        int col = static_cast<int>(i) % 3;
+        int row = static_cast<int>(i) / 3;
         float x = 110.f + col * 200.f;
         float y = 160.f + row * 180.f;
 
@@ -170,71 +233,76 @@ void MenuScreen::loadCharacterPortraits()
     }
 }
 
+// ── createMenuButtons ─────────────────────────────────────────────────────────
+// Solo crea los botones de texto usados en submenús (Personajes, Config, etc.)
 void MenuScreen::createMenuButtons()
 {
-    std::vector<std::string> names = {
-        "Iniciar Batalla", "Personajes", "Configuracion", "Salir"
-    };
-
-    buttons.resize(4);
-    buttonTexts.resize(4);
-
-    float startX = 70.f, startY = 170.f, spacing = 75.f;
-
-    for (size_t i = 0; i < names.size(); ++i)
-    {
-        buttons[i].setSize(sf::Vector2f(320.f, 55.f));
-        buttons[i].setFillColor(sf::Color(30, 30, 45));
-        buttons[i].setOutlineColor(sf::Color(70, 70, 100));
-        buttons[i].setOutlineThickness(2.f);
-        buttons[i].setPosition(startX, startY + i * spacing);
-
-        buttonTexts[i].setFont(font);
-        buttonTexts[i].setString(names[i]);
-        buttonTexts[i].setCharacterSize(24);
-        buttonTexts[i].setFillColor(sf::Color(210, 210, 230));
-        buttonTexts[i].setPosition(startX + 25.f, startY + i * spacing + 12.f);
-    }
+    // No se usa en el menú principal (reemplazado por ImageButtons)
+    // Se mantiene por si algún submenú los necesita
+    buttons.clear();
+    buttonTexts.clear();
 }
 
-// ── Lógica e Interacción ──────────────────────────────────────────────────────
+// ── updateButtonHover ─────────────────────────────────────────────────────────
 void MenuScreen::updateButtonHover(const sf::Vector2i& mousePos)
 {
-    hoveredButton = getButtonAtPosition(mousePos);
-    for (size_t i = 0; i < buttons.size(); ++i)
+    sf::Vector2f m(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
+    int prev = hoveredButton;
+    hoveredButton = -1;
+
+    for (int i = 0; i < NUM_BTNS; ++i)
     {
-        if ((int)i == hoveredButton)
+        if (menuBtns_[i].bounds.contains(m))
         {
-            buttons[i].setFillColor(sf::Color(50, 50, 80));
-            buttons[i].setOutlineColor(sf::Color(255, 215, 0));
-            buttonTexts[i].setFillColor(sf::Color::White);
+            hoveredButton = i;
+            break;
+        }
+    }
+
+    // Aplicar efecto hover: escala ligeramente mayor + color claro
+    for (int i = 0; i < NUM_BTNS; ++i)
+    {
+        if (!menuBtns_[i].loaded) continue;
+
+        if (i == hoveredButton)
+        {
+            // Aumentar escala un 5% y aclarar
+            float s = menuBtns_[i].baseScale * 1.05f;
+            menuBtns_[i].sprite.setScale(s, s);
+            menuBtns_[i].sprite.setColor(sf::Color(255, 255, 180));  // tinte amarillo suave
         }
         else
         {
-            buttons[i].setFillColor(sf::Color(30, 30, 45));
-            buttons[i].setOutlineColor(sf::Color(70, 70, 100));
-            buttonTexts[i].setFillColor(sf::Color(210, 210, 230));
+            menuBtns_[i].sprite.setScale(menuBtns_[i].baseScale, menuBtns_[i].baseScale);
+            menuBtns_[i].sprite.setColor(sf::Color::White);
         }
     }
+
+    (void)prev;
 }
 
+// ── getButtonAtPosition ───────────────────────────────────────────────────────
 int MenuScreen::getButtonAtPosition(const sf::Vector2i& mousePos) const
 {
     sf::Vector2f m(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
-    for (size_t i = 0; i < buttons.size(); ++i)
-        if (buttons[i].getGlobalBounds().contains(m))
-            return static_cast<int>(i);
+    for (int i = 0; i < NUM_BTNS; ++i)
+        if (menuBtns_[i].bounds.contains(m))
+            return i;
     return -1;
 }
 
+// ── handleMainMenuClick ───────────────────────────────────────────────────────
 void MenuScreen::handleMainMenuClick(int index)
 {
+    // 0=JUGAR  1=GALERIA  2=OPCIONES  3=SALIR
     if      (index == 0) { launchGame = true; window.close(); }
     else if (index == 1) state = MenuState::CHARACTERS;
     else if (index == 2) state = MenuState::SETTINGS;
     else if (index == 3) window.close();
 }
 
+// ── handleSubmenuEvents ───────────────────────────────────────────────────────
 void MenuScreen::handleSubmenuEvents(const sf::Event& event)
 {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
@@ -251,7 +319,8 @@ void MenuScreen::handleSubmenuEvents(const sf::Event& event)
     backButton.setFillColor(backButton.getGlobalBounds().contains(m)
         ? sf::Color(255, 0, 0) : sf::Color(180, 0, 0));
 
-    if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+    if (event.type == sf::Event::MouseButtonPressed &&
+        event.mouseButton.button == sf::Mouse::Left)
     {
         if (backButton.getGlobalBounds().contains(m))
         {
@@ -291,19 +360,47 @@ void MenuScreen::handleSubmenuEvents(const sf::Event& event)
     }
 }
 
-// ── Renderizado ───────────────────────────────────────────────────────────────
+// ── drawMainMenu ──────────────────────────────────────────────────────────────
 void MenuScreen::drawMainMenu()
 {
-    window.clear(sf::Color(15, 15, 25));
-    window.draw(titleText);
-    for (size_t i = 0; i < buttons.size(); ++i)
+    window.clear(sf::Color(10, 10, 20));
+
+    // Fondo de portada
+    if (bgLoaded_)
+        window.draw(bgSprite_);
+
+    // Botones de imagen
+    for (int i = 0; i < NUM_BTNS; ++i)
     {
-        window.draw(buttons[i]);
-        window.draw(buttonTexts[i]);
+        if (menuBtns_[i].loaded)
+        {
+            window.draw(menuBtns_[i].sprite);
+        }
+        else
+        {
+            // Fallback: rectángulo con texto si la imagen no cargó
+            const char* labels[NUM_BTNS] = { "JUGAR", "GALERIA", "OPCIONES", "SALIR" };
+            sf::RectangleShape fb(sf::Vector2f(menuBtns_[i].bounds.width,
+                                               menuBtns_[i].bounds.height));
+            fb.setPosition(menuBtns_[i].bounds.left, menuBtns_[i].bounds.top);
+            fb.setFillColor(i == hoveredButton
+                ? sf::Color(60, 60, 90) : sf::Color(30, 30, 50));
+            fb.setOutlineColor(sf::Color(255, 215, 0));
+            fb.setOutlineThickness(2.f);
+            window.draw(fb);
+
+            sf::Text ft(labels[i], font, 22);
+            ft.setFillColor(sf::Color::White);
+            ft.setPosition(menuBtns_[i].bounds.left + 10.f,
+                           menuBtns_[i].bounds.top  + 10.f);
+            window.draw(ft);
+        }
     }
+
     window.display();
 }
 
+// ── drawCharactersScreen ──────────────────────────────────────────────────────
 void MenuScreen::drawCharactersScreen()
 {
     window.clear(sf::Color(15, 15, 25));
@@ -331,26 +428,23 @@ void MenuScreen::drawCharactersScreen()
     window.display();
 }
 
+// ── drawCharacterDetail ───────────────────────────────────────────────────────
 void MenuScreen::drawCharacterDetail(int index)
 {
     window.clear(sf::Color(20, 20, 35));
 
-    if (index >= 0 && index < (int)chars.size())
+    if (index >= 0 && index < static_cast<int>(chars.size()))
     {
-        // ── Nombre + ícono de atributo ────────────────────────────────────────
-        // El nombre va en x=320, y=60. Ponemos el ícono a su izquierda.
         const float ICON_SIZE = 32.f;
         const float NAME_X    = 320.f;
         const float NAME_Y    = 60.f;
 
-        // Calcular ancho real del nombre para centrar ícono verticalmente con él
         sf::Text nameTxt(chars[index].name, font, 36);
         nameTxt.setFillColor(sf::Color(255, 215, 0));
         nameTxt.setStyle(sf::Text::Bold);
         nameTxt.setPosition(NAME_X, NAME_Y);
         window.draw(nameTxt);
 
-        // Ícono a la izquierda del nombre, centrado verticalmente con él
         Attribute attr = MENU_CHAR_ATTR[index];
         int ai = menuAttrIndex(attr);
         if (attrLoaded[ai])
@@ -358,24 +452,19 @@ void MenuScreen::drawCharacterDetail(int index)
             sf::Sprite iconSprite(attrTextures[ai]);
             auto sz = attrTextures[ai].getSize();
             iconSprite.setScale(ICON_SIZE / sz.x, ICON_SIZE / sz.y);
-
-            // Centrar verticalmente respecto al texto del nombre
             float nameHeight = nameTxt.getLocalBounds().height;
-            float iconX = NAME_X - ICON_SIZE - 8.f;
-            float iconY = NAME_Y + (nameHeight - ICON_SIZE) / 2.f;
-            iconSprite.setPosition(iconX, iconY);
+            iconSprite.setPosition(NAME_X - ICON_SIZE - 8.f,
+                                   NAME_Y + (nameHeight - ICON_SIZE) / 2.f);
             window.draw(iconSprite);
         }
         else
         {
-            // Fallback: texto con el nombre del atributo si no cargó la imagen
             sf::Text attrTxt("[" + std::string(ATTR_NAME[ai]) + "]", font, 14);
             attrTxt.setFillColor(sf::Color(180, 220, 255));
             attrTxt.setPosition(NAME_X - 70.f, NAME_Y + 10.f);
             window.draw(attrTxt);
         }
 
-        // ── Imagen grande del personaje ───────────────────────────────────────
         if (chars[index].loaded)
         {
             sf::Sprite largeSprite = chars[index].sprite;
@@ -386,7 +475,7 @@ void MenuScreen::drawCharacterDetail(int index)
             window.draw(largeSprite);
         }
 
-        // ── Descripción con salto de línea automático ─────────────────────────
+        // Descripción con salto de línea automático
         std::string rawStr = chars[index].description;
         std::string formattedStr;
         size_t currentLineLength = 0;
@@ -411,6 +500,7 @@ void MenuScreen::drawCharacterDetail(int index)
     window.display();
 }
 
+// ── drawSettingsScreen ────────────────────────────────────────────────────────
 void MenuScreen::drawSettingsScreen()
 {
     window.clear(sf::Color(15, 15, 25));
@@ -453,13 +543,14 @@ void MenuScreen::drawSettingsScreen()
     window.display();
 }
 
+// ── drawBackButton ────────────────────────────────────────────────────────────
 void MenuScreen::drawBackButton()
 {
     window.draw(backButton);
     window.draw(backText);
 }
 
-// ── Game loop ─────────────────────────────────────────────────────────────────
+// ── run ───────────────────────────────────────────────────────────────────────
 void MenuScreen::run()
 {
     while (window.isOpen())
@@ -474,6 +565,7 @@ void MenuScreen::run()
             {
                 if (event.type == sf::Event::MouseMoved)
                     updateButtonHover(sf::Vector2i(event.mouseMove.x, event.mouseMove.y));
+
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left)
                 {
@@ -490,10 +582,10 @@ void MenuScreen::run()
 
         if (!window.isOpen()) break;
 
-        if      (state == MenuState::MAIN_MENU)       drawMainMenu();
-        else if (state == MenuState::CHARACTERS)       drawCharactersScreen();
-        else if (state == MenuState::CHARACTER_DETAIL) drawCharacterDetail(detailIndex);
-        else if (state == MenuState::SETTINGS)         drawSettingsScreen();
+        if      (state == MenuState::MAIN_MENU)        drawMainMenu();
+        else if (state == MenuState::CHARACTERS)        drawCharactersScreen();
+        else if (state == MenuState::CHARACTER_DETAIL)  drawCharacterDetail(detailIndex);
+        else if (state == MenuState::SETTINGS)          drawSettingsScreen();
     }
 }
 

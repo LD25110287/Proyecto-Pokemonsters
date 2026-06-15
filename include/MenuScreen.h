@@ -49,14 +49,37 @@ private:
     sf::Font         font;
     sf::Text         titleText;
 
-    std::vector<sf::RectangleShape> buttons;
+    // ── Fondo del menú principal ──────────────────────────────────────────────
+    sf::Texture bgTexture_;
+    sf::Sprite  bgSprite_;
+    bool        bgLoaded_ = false;
+
+    // ── Botones con imagen ────────────────────────────────────────────────────
+    // Cada botón tiene: textura normal, textura hover (aclarada con shader), sprite,
+    // y un rectángulo invisible para hit-testing.
+    struct ImageButton
+    {
+        sf::Texture  texNormal;
+        sf::Sprite   sprite;
+        sf::FloatRect bounds;    // área de click calculada al posicionar
+        bool         loaded = false;
+        float        baseScale = 1.f;   // escala normal
+    };
+
+    static const int NUM_BTNS = 4;
+    ImageButton menuBtns_[NUM_BTNS];   // 0=JUGAR 1=GALERIA 2=OPCIONES 3=SALIR
+
+    // Índice del botón bajo el cursor (-1 si ninguno)
+    int hoveredButton;
+
+    // ── Submenús (sin cambios) ────────────────────────────────────────────────
+    std::vector<sf::RectangleShape> buttons;       // usados solo en submenús
     std::vector<sf::Text>           buttonTexts;
 
     sf::RectangleShape backButton;
     sf::Text           backText;
 
     MenuState state;
-    int       hoveredButton;
     bool      launchGame;
 
     std::vector<CharEntry> chars;
@@ -66,7 +89,6 @@ private:
     std::vector<sf::Text>           charCardTexts;
 
     // ── Íconos de atributo ────────────────────────────────────────────────────
-    // 0 = Vacuna (Va), 1 = Virus (Vi), 2 = Data (Da)
     sf::Texture attrTextures[3];
     bool        attrLoaded[3] = { false, false, false };
 
