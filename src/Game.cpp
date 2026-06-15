@@ -19,10 +19,10 @@ static const CharInfo CHAR_TABLE[6] = {
     {   // 0: Exdarktyranomon
         "Exdarktyranomon", "assets/images/1.png", 50, 50, 500, 22, 8,
         {
-            {"Frenesi Viral",    6,  MoveType::Normal, 0, 9, 0},
-            {"Cola de Hierro",   15, MoveType::Normal, 1, 9, 2},
-            {"Explosion Fuego",  25, MoveType::Fire,   2, 9, 3},
-            {"Mar de Llamas",    40, MoveType::Fire,   3, 9, 5}
+            {"Frenesi Viral",    6,  MoveType::Normal, 0, 14, 0},
+            {"Cola de Hierro",   15, MoveType::Normal, 1, 14, 2},
+            {"Explosion Fuego",  25, MoveType::Fire,   2, 14, 3},
+            {"Mar de Llamas",    40, MoveType::Fire,   3, 14, 5}
         }
     },
     {   // 1: BeelStarmon
