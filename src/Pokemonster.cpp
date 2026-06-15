@@ -23,6 +23,69 @@ Pokemonster::Pokemonster(const std::string& name, int hpMax, int attack,
       energy(3), attribute(Attribute::Vacuna)
 {}
 
+// ── Constructor de copia ──────────────────────────────────────────────────────
+// Copia todos los miembros y luego RE-VINCULA sprite a la textura propia
+// de este objeto (con resetRect=false para conservar el frame actual).
+Pokemonster::Pokemonster(const Pokemonster& other)
+    : name(other.name), hpMax(other.hpMax), hpActual(other.hpActual),
+      attackStat(other.attackStat), defense(other.defense), moves(other.moves),
+      attribute(other.attribute),
+      texture(other.texture), sprite(other.sprite),
+      frameWidth(other.frameWidth), frameHeight(other.frameHeight),
+      currentFrame(other.currentFrame), currentRow(other.currentRow),
+      maxFrames(other.maxFrames), frameDuration(other.frameDuration),
+      isAttacking(other.isAttacking),
+      // animClock no necesita copiarse: se reinicia, sin efecto visible
+      pendingDamage(0), hasPendingDamage(false), damageTarget(nullptr),
+      energy(other.energy)
+{
+    // FIX cuadro blanco: re-vincular sprite a NUESTRA textura, conservando
+    // el textureRect (frame de animación) ya copiado en sprite.
+    sprite.setTexture(texture, false);
+}
+
+// ── Operador de asignación ────────────────────────────────────────────────────
+// Mismo fix que el constructor de copia, para el caso
+// `player = buildCharacter(...)` usado al cambiar de personaje en combate.
+Pokemonster& Pokemonster::operator=(const Pokemonster& other)
+{
+    if (this == &other)
+        return *this;
+
+    name        = other.name;
+    hpMax       = other.hpMax;
+    hpActual    = other.hpActual;
+    attackStat  = other.attackStat;
+    defense     = other.defense;
+    moves       = other.moves;
+    attribute   = other.attribute;
+
+    texture = other.texture;
+    sprite  = other.sprite;
+
+    frameWidth    = other.frameWidth;
+    frameHeight   = other.frameHeight;
+    currentFrame  = other.currentFrame;
+    currentRow    = other.currentRow;
+    maxFrames     = other.maxFrames;
+    frameDuration = other.frameDuration;
+    isAttacking   = other.isAttacking;
+
+    // Reiniciar daño diferido: evita punteros colgantes a objetivos
+    // de una partida/objeto anterior.
+    pendingDamage    = 0;
+    hasPendingDamage = false;
+    damageTarget     = nullptr;
+
+    energy = other.energy;
+
+    // FIX cuadro blanco: re-vincular sprite a NUESTRA textura, conservando
+    // el textureRect (frame de animación) ya copiado en sprite.
+    sprite.setTexture(texture, false);
+
+    return *this;
+}
+
 // ── Sprite ────────────────────────────────────────────────────────────────────
 bool Pokemonster::loadSpriteSheet(const std::string& path, int fWidth, int fHeight)
 {

@@ -26,6 +26,16 @@ public:
     Pokemonster(const std::string& name, int hpMax, int attack, int defense,
                 const std::vector<Move>& moves);
 
+    // ── Constructor y operador de copia personalizados ──────────────────────
+    // Sin esto, copiar/asignar un Pokemonster (p.ej. al cambiar de personaje
+    // en combate con `player = buildCharacter(...)`) deja `sprite` apuntando
+    // a la textura del objeto temporal de origen, que se destruye al terminar
+    // la expresión → el personaje se dibuja como un cuadro blanco.
+    // Estos re-vinculan `sprite` a la textura PROPIA de este objeto.
+    Pokemonster(const Pokemonster& other);
+    Pokemonster& operator=(const Pokemonster& other);
+    // ──────────────────────────────────────────────────────────────────────
+
     bool loadSpriteSheet(const std::string& path, int fWidth, int fHeight);
     void setFrame(int row, int col);
     void playAnimation(int row, int framesAmount);
