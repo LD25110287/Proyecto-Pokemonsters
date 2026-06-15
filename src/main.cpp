@@ -30,33 +30,30 @@ int main()
         int stage           = selector.getSelectedStage();
 
         // ── 3. Serie KoF ──────────────────────────────────────────────────────
-        // Índices actuales en el equipo de cada jugador
-        int p1TeamIdx = 0;  // qué personaje del equipo J1 está en campo
-        int p2TeamIdx = 0;  // qué personaje del equipo J2 está en campo
+        // p1TeamIdx/p2TeamIdx: qué slot (0-2) del equipo entra al campo
+        // al INICIO de cada ronda, según el formato de eliminación KoF.
+        int p1TeamIdx = 0;
+        int p2TeamIdx = 0;
 
         int p1Wins = 0;
         int p2Wins = 0;
         int roundNumber = 1;
 
-        // Sobrevivientes: nullptr = hay que crear uno nuevo
         Pokemonster* survivorP1 = nullptr;
         Pokemonster* survivorP2 = nullptr;
 
         AudioManager::playBattleMusic();
 
-        // La serie dura hasta que alguien gane 2 rondas o se agoten los personajes.
-        // Al ser un juego por turnos NO puede haber empate: cada ronda gana
-        // exactamente J1 o J2, así que p1Wins+p2Wins sube 1 por ronda y la
-        // serie nunca supera 3 rondas (roundNumber máximo = 3).
         while (p1Wins < 2 && p2Wins < 2 &&
                p1TeamIdx < 3 && p2TeamIdx < 3)
         {
-            int p1CharIdx = p1Team[p1TeamIdx];
-            int p2CharIdx = p2Team[p2TeamIdx];
-
-            // Crear la ronda KoF
-            Game game(p1CharIdx, p2CharIdx, stage,
-                      survivorP1, survivorP2, roundNumber);
+            // Constructor con equipos COMPLETOS de 3, indicando qué slot
+            // entra al campo en esta ronda. Esto permite que el panel
+            // "Cambiar personaje" dentro de la batalla muestre a los
+            // 3 integrantes reales del equipo (no el mismo x3).
+            Game game(p1Team, p2Team, stage,
+                      survivorP1, survivorP2, roundNumber,
+                      p1TeamIdx, p2TeamIdx);
             game.run();
 
             int w = game.getWinner();
@@ -65,13 +62,12 @@ int main()
             {
                 // J1 ganó: su personaje sobrevive, J2 pasa al siguiente
                 p1Wins++;
-                survivorP1 = new Pokemonster(game.getPlayer()); // copia con vida actual
+                survivorP1 = new Pokemonster(game.getPlayer());
                 survivorP2 = nullptr;
                 p2TeamIdx++;
             }
             else // w == 2 (no puede haber empate en un juego por turnos)
             {
-                // J2 ganó: su personaje sobrevive, J1 pasa al siguiente
                 p2Wins++;
                 survivorP2 = new Pokemonster(game.getEnemy());
                 survivorP1 = nullptr;
@@ -80,12 +76,10 @@ int main()
 
             roundNumber++;
 
-            // Limpiar punteros dinámicos si ya no se usarán
             if (p1TeamIdx >= 3) { delete survivorP1; survivorP1 = nullptr; }
             if (p2TeamIdx >= 3) { delete survivorP2; survivorP2 = nullptr; }
         }
 
-        // Limpiar al salir de la serie
         delete survivorP1;
         delete survivorP2;
 

@@ -4,7 +4,7 @@
 // ── Definición de miembros estáticos ─────────────────────────────────────────
 sf::Music           AudioManager::music;
 AudioManager::Track AudioManager::currentTrack  = AudioManager::Track::NONE;
-float               AudioManager::currentVolume = 50.f;   // 50% por defecto
+float               AudioManager::currentVolume = 10.f;   // 50% por defecto
 
 sf::SoundBuffer AudioManager::roundBuffers[3];
 sf::Sound       AudioManager::roundSound;
