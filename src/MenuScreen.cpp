@@ -132,41 +132,57 @@ void MenuScreen::loadAssets()
 
     // ── Botones con imagen ────────────────────────────────────────────────────
     //
-    // Layout: columna derecha, centrada verticalmente.
-    // Los 4 botones se apilan con un pequeño gap entre ellos.
-    // Escala objetivo: los botones ocupan ~260px de ancho (≈1/3 de la pantalla)
-    // y se ubican en x≈510 (derecha), centrados verticalmente en y≈220-490.
+    // JUGAR (índice 0): escala grande, queda igual.
+    // GALERIA / OPCIONES / SALIR (1-3): escala 0.50 para que los 4 botones
+    // quepan en los 600 px de alto de la ventana.
     //
-    const float BTN_SCALE = 220.f / 300.f;  // escala medida pixel a pixel sobre imagen ref
-    const float BTN_W     = 300.f * BTN_SCALE;  // 220 px
-    const float BTN_H     = 100.f * BTN_SCALE;  // ~73 px
-    const float GAP       = 18.f;
-    const float ANCHOR_X  = 293.f;   // centro x=403, borde izq=403-110
-    const float BASE_Y    = 316.f;   // primer boton (JUGAR)
+    // Cálculo:
+    //   JUGAR:  0.733 scale -> h ~73 px
+    //   Otros:  0.500 scale -> h  50 px  (imagen original 300x100)
+    //   GAP: 10 px
+    //   Total: 73 + 3*50 + 3*10 = 253 px
+    //   BASE_Y=316 -> ultimo boton termina en ~569 px (cabe en 600)
+    //
+    const float BASE_Y   = 316.f;
+    const float GAP      = 10.f;
+
+    // Escala por boton: JUGAR grande, los demas reducidos
+    const float SCALES[NUM_BTNS] = { 220.f/300.f,  // 0: JUGAR    ~73px alto
+                                      0.50f,         // 1: GALERIA   50px alto
+                                      0.50f,         // 2: OPCIONES  50px alto
+                                      0.50f };       // 3: SALIR     50px alto
+
+    // Centro horizontal de JUGAR: 293 + 220/2 = 403 px
+    // Cada boton se centra en ese mismo punto: anchorX = 403 - btnW/2
+    const float CENTER_X = 293.f + (300.f * SCALES[0]) / 2.f;  // = 403 px
 
     float currentY = BASE_Y;
 
     for (int i = 0; i < NUM_BTNS; ++i)
     {
-        ImageButton& b = menuBtns_[i];
+        ImageButton& b     = menuBtns_[i];
+        const float  scale = SCALES[i];
+        const float  btnW  = 300.f * scale;
+        const float  btnH  = 100.f * scale;
+        const float  posX  = CENTER_X - btnW / 2.f;   // centrado horizontal
+
         b.loaded = b.texNormal.loadFromFile(BTN_PATHS[i]);
 
         if (!b.loaded)
         {
             std::cerr << "[MenuScreen] No se cargo " << BTN_PATHS[i] << "\n";
-            // Posición de reserva para que el hit-test tenga algo
-            b.bounds = sf::FloatRect(ANCHOR_X, currentY, BTN_W, BTN_H);
-            currentY += BTN_H + GAP;
+            b.bounds = sf::FloatRect(posX, currentY, btnW, btnH);
+            currentY += btnH + GAP;
             continue;
         }
 
         b.sprite.setTexture(b.texNormal);
-        b.baseScale = BTN_SCALE;
-        b.sprite.setScale(BTN_SCALE, BTN_SCALE);
-        b.sprite.setPosition(ANCHOR_X, currentY);
-        b.bounds = sf::FloatRect(ANCHOR_X, currentY, BTN_W, BTN_H);
+        b.baseScale = scale;
+        b.sprite.setScale(scale, scale);
+        b.sprite.setPosition(posX, currentY);
+        b.bounds = sf::FloatRect(posX, currentY, btnW, btnH);
 
-        currentY += BTN_H + GAP;
+        currentY += btnH + GAP;
     }
 
     // Íconos de atributo
