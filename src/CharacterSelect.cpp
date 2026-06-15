@@ -54,7 +54,7 @@ void CharacterSelect::loadAssets()
     for (const auto& p : fontPaths)
         if (font.loadFromFile(p)) break;
 
-    // Fondo VS
+    // Fondo VS (pantalla de confirmación)
     if (!vsBgTexture.loadFromFile("assets/images/imagen vs.png"))
         std::cerr << "No se pudo cargar imagen vs.png\n";
     else
@@ -62,6 +62,18 @@ void CharacterSelect::loadAssets()
         vsBgSprite.setTexture(vsBgTexture);
         auto sz = vsBgTexture.getSize();
         vsBgSprite.setScale(800.f / sz.x, 600.f / sz.y);
+    }
+
+    // Fondo portada (galería, selección de personaje, selección de orden)
+    if (!menuBgTexture_.loadFromFile("assets/images/PORTADA_POKEMONSTER_800X600.png"))
+        std::cerr << "No se pudo cargar PORTADA_POKEMONSTER_800X600.png\n";
+    else
+    {
+        menuBgSprite_.setTexture(menuBgTexture_);
+        auto sz = menuBgTexture_.getSize();
+        menuBgSprite_.setScale(800.f / sz.x, 600.f / sz.y);
+        // Oscurecer un poco para que los elementos UI sean legibles
+        menuBgSprite_.setColor(sf::Color(180, 180, 180, 255));
     }
 
     // Fondos de escenario
@@ -328,6 +340,8 @@ void CharacterSelect::update()
 void CharacterSelect::drawPickingScreen()
 {
     window.clear(sf::Color(18, 18, 32));
+    if (menuBgTexture_.getSize().x > 0)
+        window.draw(menuBgSprite_);
 
     bool isJ1Turn = (pickTurn % 2 == 0);
     sf::Color j1Color(100, 180, 255);
@@ -433,6 +447,8 @@ void CharacterSelect::drawPickingScreen()
 void CharacterSelect::drawOrderScreen(bool isP1, int targetRound)
 {
     window.clear(sf::Color(18, 18, 32));
+    if (menuBgTexture_.getSize().x > 0)
+        window.draw(menuBgSprite_);
 
     sf::Color playerColor = isP1 ? sf::Color(100, 180, 255) : sf::Color(255, 120, 120);
     std::string playerName = isP1 ? "Jugador 1" : "Jugador 2";

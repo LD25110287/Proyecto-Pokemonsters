@@ -103,6 +103,10 @@ private:
     sf::Texture vsBgTexture;
     sf::Sprite  vsBgSprite;
 
+    // Fondo compartido: galería, selección de personaje y orden
+    sf::Texture menuBgTexture_;
+    sf::Sprite  menuBgSprite_;
+
     static const int NUM_STAGES = 3;
     sf::Texture  stageBgTextures[NUM_STAGES];
     sf::Sprite   stageBgSprites[NUM_STAGES];

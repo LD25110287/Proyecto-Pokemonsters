@@ -420,6 +420,13 @@ void MenuScreen::drawMainMenu()
 void MenuScreen::drawCharactersScreen()
 {
     window.clear(sf::Color(15, 15, 25));
+    if (bgLoaded_)
+    {
+        // Oscurecer portada para que las cartas sean legibles
+        bgSprite_.setColor(sf::Color(160, 160, 160, 255));
+        window.draw(bgSprite_);
+        bgSprite_.setColor(sf::Color(255, 255, 255, 255)); // restaurar para el menú principal
+    }
 
     sf::Text subTitle("Selecciona un personaje para ver detalles", font, 24);
     subTitle.setFillColor(sf::Color(200, 200, 220));
@@ -520,6 +527,12 @@ void MenuScreen::drawCharacterDetail(int index)
 void MenuScreen::drawSettingsScreen()
 {
     window.clear(sf::Color(15, 15, 25));
+    if (bgLoaded_)
+    {
+        bgSprite_.setColor(sf::Color(160, 160, 160, 255));
+        window.draw(bgSprite_);
+        bgSprite_.setColor(sf::Color(255, 255, 255, 255));
+    }
 
     sf::Text subTitle("Configuracion", font, 36);
     subTitle.setFillColor(sf::Color(255, 215, 0));
