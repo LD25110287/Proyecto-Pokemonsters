@@ -1,10 +1,11 @@
+
 # Digital Monsters Battle
 
 ## 📝 Descripción del Proyecto
-**Digital Monsters Battle** es un juego de combate estratégico 2D con estética *pixel art* que une la toma de decisiones tácticas de las batallas de monstruos clásicas con el formato competitivo de equipos de los juegos de lucha. Selecciona tu tercia de criaturas, elige el orden de combate y utiliza tus mejores ataques para derrotar al equipo rival en intensos combates por turnos.
+**Digital Monsters Battle** es un juego de combate estratégico 2D con estética *pixel art* que une la toma de decisiones tácticas de las batallas de monstruos clásicas con el formato competitivo de equipos de los juegos de lucha. Selecciona tu equipo de Digital Monsters, elige el orden de combate y utiliza tus mejores ataques para derrotar al equipo rival en intensos combates por turnos.
 
 ## 🎯 Objetivo del Juego
-Eliminar a los monstruos del equipo rival reduciendo sus Puntos de Vida (HP) a cero. El primer jugador en derrotar a toda la tercia del oponente gana la partida.
+Eliminar a los monstruos del equipo rival reduciendo sus Puntos de Vida (HP) a cero en un combate al mejor de 3 rondas. El primer jugador en derrotar 2 veces a su oponente gana la partida.
 
 ## 🎮 Controles
 El juego está diseñado para ser completamente controlado mediante una interfaz gráfica interactiva, ideal para jugar en modo local compartido (*Hotseat*):
@@ -13,7 +14,7 @@ El juego está diseñado para ser completamente controlado mediante una interfaz
 ## ⚙️ Mecánicas
 * **Selección de Equipo (Drafting):** Cada jugador elige un equipo de 3 personajes y define estratégicamente el orden en el que entrarán a la arena.
 * **Sistema de Supervivencia (Estilo KOF):** Cuando un personaje derrota a su rival, se mantiene en combate para la siguiente ronda conservando los Puntos de Vida (HP) y Energía exactos con los que finalizó el encuentro anterior.
-* **Combate Táctico por Comandos:** Dinámica de turnos donde cada monstruo cuenta con un conjunto de 4 habilidades únicas para mermar la vida del oponente.
+* **Combate Táctico por turnos:** Dinámica de turnos donde cada monstruo cuenta con un conjunto de 4 habilidades únicas para mermar la vida del oponente.
 * **Triángulo de Atributos (Ventajas Dinámicas):** Existen 3 clases de atributos en el juego, y cada monstruo posee solo uno. Se rigen bajo una lógica circular (fuerte, neutro o débil). Atacar con ventaja elemental otorga un multiplicador de daño de **1.2x a 1.5x**, obligando al jugador a analizar la compatibilidad antes de actuar.
 * **Economía y Gestión de Energía:** Los jugadores inician el combate con 3 de 10 barras de energía máximas. Al finalizar cada turno (sin importar de quién sea), ambos jugadores reciben de forma pasiva +1 barra de energía. Dado que 3 de las 4 habilidades de cada monstruo exigen un coste específico de este recurso, se mitiga el uso repetitivo de ataques poderosos y se fomenta la planificación a mediano plazo.
 * **Variabilidad Dinámica de Daño (RNG / Factor Suerte):** Las habilidades reducen la salud del rival basándose en un porcentaje de vida, pero el daño neto no es plano. Incorpora un sistema de fluctuación aleatoria (por ejemplo, permitiendo que un mismo ataque inflija desde un 10% hasta un 18% de daño). Este factor predictivo simula la adrenalina de los golpes críticos, permitiendo giros inesperados en momentos decisivos.
