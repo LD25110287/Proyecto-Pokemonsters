@@ -26,16 +26,25 @@ jobs:
           install: >-
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-sfml
             mingw-w64-x86_64-make
+
+      - name: Descargar SFML 2.6.2 (binarios oficiales para MinGW)
+        run: |
+          curl -L -o sfml.zip https://github.com/SFML/SFML/releases/download/2.6.2/SFML-2.6.2-windows-gcc-13.1.0-mingw-64-bit.zip
+          unzip -q sfml.zip -d .
+          mv SFML-2.6.2 SFML
 
       - name: Configurar proyecto (CMake)
         run: |
-          cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DSFML_DIR="$(pwd)/SFML/lib/cmake/SFML"
 
       - name: Compilar proyecto
         run: |
           cmake --build build --config Release
+
+      - name: Copiar DLLs de SFML junto al ejecutable
+        run: |
+          cp SFML/bin/*.dll build/
 
       - name: Subir ejecutable como artefacto
         uses: actions/upload-artifact@v4
