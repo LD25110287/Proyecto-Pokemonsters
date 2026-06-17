@@ -30,7 +30,8 @@ jobs:
 
       - name: Descargar SFML 2.6.2 (binarios oficiales para MinGW)
         run: |
-          curl -L -o sfml.zip https://github.com/SFML/SFML/releases/download/2.6.2/SFML-2.6.2-windows-gcc-13.1.0-mingw-64-bit.zip
+          curl -L -f -o sfml.zip "https://sourceforge.net/projects/sfml.mirror/files/2.6.2/SFML-2.6.2-windows-gcc-13.1.0-mingw-64-bit.zip/download"
+          file sfml.zip
           tar -xf sfml.zip
           mv SFML-2.6.2 SFML
 
