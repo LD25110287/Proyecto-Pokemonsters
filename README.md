@@ -1,7 +1,7 @@
 
 # Digital Monsters Battle
 
-## 📝 Descripción del Proyecto
+## 📝 Descripción del Proyecto 
 **Digital Monsters Battle** es un juego de combate estratégico 2D con estética *pixel art* que une la toma de decisiones tácticas de las batallas de monstruos clásicas con el formato competitivo de equipos de los juegos de lucha. Selecciona tu equipo de Digital Monsters, elige el orden de combate y utiliza tus mejores ataques para derrotar al equipo rival en intensos combates por turnos.
 
 ## 🎯 Objetivo del Juego
